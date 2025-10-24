@@ -10,9 +10,28 @@
 - Project documentation and planning (`project_doc.md`)
 - Initial project structure created
 - GitHub repository initialized
+- **Step 1.1: Frontend Initialization** ✅
+  - Vite + React 18 + TypeScript setup
+  - React Router v6 installed
+  - Zustand state management installed
+  - Tailwind CSS v4 configured
+  - Folder structure created (components, pages, types, utils, store, services)
+  - TypeScript path aliases configured
+  - Custom dark theme with gold accents
+  - Dev server running successfully
+  - 2 issues encountered and resolved (see ERROR_LOG.md)
+- **Step 1.2: Backend Initialization** ✅
+  - Node.js + Express + TypeScript setup
+  - ESLint configured for code quality
+  - Folder structure created (routes, controllers, services, types, utils, middleware)
+  - TypeScript path aliases configured
+  - Health check endpoint working
+  - Nodemon auto-reload configured
+  - Dev server running on port 3000
+  - No issues encountered
 
 ### 🚧 Partially Built
-- **Nothing yet** - Project is in initial planning phase
+- **Nothing yet** - Moving to Step 1.3
 
 ### ❌ Missing / Not Started
 
