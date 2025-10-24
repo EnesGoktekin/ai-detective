@@ -1,6 +1,6 @@
 # Detective AI - Project Status & Updates
 
-**Last Updated:** October 23, 2025
+**Last Updated:** October 24, 2025
 
 ---
 
@@ -36,10 +36,40 @@
   - Test endpoint added (/api/database/test)
   - Environment variables configured
   - Database logging on server startup
-  - No issues encountered
+  - 1 issue encountered and resolved (misleading error message)
+- **Step 1.4: Gemini AI Integration** ✅
+  - Google Gemini SDK installed (@google/generative-ai)
+  - API key securely configured in .env
+  - Gemini service created (gemini.service.ts)
+  - Model configured: gemini-2.5-flash
+  - AI test endpoint added (GET /api/ai/test)
+  - AI prompt endpoint added (POST /api/ai/prompt)
+  - Server startup AI connection test implemented
+  - Security: X-Powered-By header disabled
+  - Snyk security scan: 0 issues
+  - Turkish detective responses tested successfully
+  - 3 issues encountered and resolved (see ERROR_LOG.md)
 
 ### 🚧 Partially Built
-- **Nothing yet** - Moving to Step 1.4
+- **Nothing yet** - Moving to Step 2.1
+
+### ❌ Missing / Not Started
+
+#### Phase 1: Foundation & Setup ✅
+- [x] Step 1.1: Frontend initialization
+- [x] Step 1.2: Backend initialization
+- [x] Step 1.3: Supabase database connection
+- [x] Step 1.4: Gemini AI integration
+
+#### Phase 2: Database Schema (Next)
+- [ ] Step 2.1: Create Cases table
+- [ ] Step 2.2: Create Clues table
+- [ ] Step 2.3: Create Characters table
+- [ ] Step 2.4: Create GameSessions table
+- [ ] Step 2.5: Create ChatHistory table
+- [ ] Step 2.6: Create Summaries table
+- [ ] Step 2.7: Setup database relationships
+- [ ] Step 2.8: Add TypeScript type definitions
 
 ### ❌ Missing / Not Started
 
