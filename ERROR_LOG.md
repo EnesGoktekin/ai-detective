@@ -174,6 +174,247 @@ body {
 
 ## 📊 Hata İstatistikleri
 
+**Toplam Hata:** 6  
+**Çözülen:** 6  
+**Bekleyen:** 0  
+
+**Kategoriler:**
+- 🔧 Konfigürasyon: 2
+- 🎨 CSS/Styling: 1
+- 🗄️ Database: 1
+- 🤖 AI/API: 3
+
+---
+
+### ❌ Hata #4: Gemini AI Model Adı (404 Not Found)
+
+**Zaman:** 17:25  
+**Adım:** Step 1.4 - Gemini AI Integration  
+**Durum:** ✅ Çözüldü
+
+#### Hata Mesajı:
+```
+Gemini AI Error: GoogleGenerativeAIFetchError: [GoogleGenerativeAI Error]: 
+Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent: 
+[404 Not Found] models/gemini-pro is not found for API version v1beta, 
+or is not supported for generateContent.
+```
+
+#### Neden:
+- İlk olarak `gemini-pro` model adı kullanıldı
+- Bu model Google tarafından deprecated edilmiş veya API version'da desteklenmiyor
+- Birçok model adı denendi: `gemini-pro`, `gemini-1.5-flash`, `gemini-1.5-flash-latest`, `gemini-2.0-flash-exp`
+- Hiçbiri çalışmadı
+
+#### Denenen Model Adları (Başarısız):
+1. ❌ `gemini-pro` - 404 Not Found
+2. ❌ `gemini-1.5-flash` - 404 Not Found  
+3. ❌ `gemini-1.5-flash-latest` - 404 Not Found
+4. ❌ `gemini-2.0-flash-exp` - 404 Not Found
+
+#### Çözüm:
+
+**Kullanıcı doğru model adını verdi: `gemini-2.5-flash` ✅**
+
+```typescript
+// ❌ YANLIŞ - Eski/Desteklenmeyen model
+const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+
+// ✅ DOĞRU - Gemini 2.5 Flash modeli
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+```
+
+#### Test Sonucu:
+```
+🤖 Testing Gemini AI connection...
+✅ Gemini AI connection successful!
+```
+
+**Örnek Yanıt:**
+```
+Prompt: "Sen bir dedektif oyunu AI'ısın. Kendini kısaca Türkçe tanıt."
+
+Response: "Merhaba! Ben bir dedektif oyunu yapay zekasıyım. Bana 'Dedektif Asistanı' 
+veya 'İpuçları Avcısı' diyebilirsin. Görevim, bu gizemli dünyada sana yol göstermek, 
+ipuçlarını bir araya getirmene yardımcı olmak ve en karmaşık davaları bile çözüme 
+kavuşturmak..."
+```
+
+---
+
+### ❌ Hata #5: Backend Server Erken Kapanma
+
+**Zaman:** 17:35  
+**Adım:** Step 1.4 - Gemini AI Integration  
+**Durum:** ✅ Çözüldü
+
+#### Hata Mesajı:
+```
+✅ Gemini AI connection successful!
+[nodemon] clean exit - waiting for changes before restart
+```
+
+**Terminal Test:**
+```bash
+PS> Invoke-RestMethod -Uri "http://localhost:3000/api/ai/test"
+Invoke-RestMethod : Uzak sunucuya bağlanılamıyor
+```
+
+**Port Kontrolü:**
+```bash
+PS> netstat -ano | findstr :3000
+(Boş sonuç - port dinlemede değil)
+```
+
+#### Neden:
+- **Async callback problemi:** `app.listen()` callback'inde `async` kullanıldı
+- `await testDatabaseConnection()` ve `await testGeminiConnection()` çağrıları yapıldı
+- Node.js async callback tamamlandıktan sonra script'i sonlandırdı
+- Server socket açıldı ama script exit ettiği için socket kapandı
+
+#### Problem Kodu:
+```typescript
+// ❌ YANLIŞ - async callback server'ı kapatıyor
+app.listen(PORT, async () => {
+  console.info(`🚀 Server is running on port ${PORT}`);
+  
+  // Async işlemler tamamlanınca callback bitiyor
+  await testDatabaseConnection();
+  await testGeminiConnection();
+  
+  // Callback sona erdiğinde Node.js script'i exit ediyor
+  // Server socket kapanıyor!
+});
+```
+
+#### İlk Çözüm Denemesi (Başarısız):
+```typescript
+// ❌ HALA ÇALIŞMADI - Promise kullandık ama server export edilmedi
+app.listen(PORT, () => {
+  testDatabaseConnection().catch(console.error);
+  testGeminiConnection().then(...).catch(console.error);
+});
+```
+
+Bu yaklaşımda:
+- Promise'ler non-blocking oldu ✅
+- Ama server object'i bir değişkene atanmadı ❌
+- Script yine tamamlandı ve exit etti ❌
+
+#### Final Çözüm:
+
+**Server object'ini değişkene atayıp export ettik:**
+
+```typescript
+// ✅ DOĞRU - Server object'i tutuluyor, script ayakta kalıyor
+const server = app.listen(PORT, () => {
+  console.info(`🚀 Detective AI Backend server is running on port ${PORT}`);
+  console.info(`📍 Health check: http://localhost:${PORT}/api/health`);
+  console.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Test database connection (async, non-blocking)
+  const dbInfo = getDatabaseInfo();
+  console.info(`🗄️  Database: ${dbInfo.url}`);
+  testDatabaseConnection().catch(console.error);
+  
+  // Test Gemini AI connection (async, non-blocking)
+  console.info('🤖 Testing Gemini AI connection...');
+  testGeminiConnection().then((aiConnected) => {
+    if (aiConnected) {
+      console.info('✅ Gemini AI connection successful!');
+    } else {
+      console.error('❌ Gemini AI connection failed!');
+    }
+  }).catch(console.error);
+});
+
+// Export app for testing purposes
+export default app;
+export { server }; // ← SERVER EXPORT EDİLDİ!
+```
+
+#### Değişiklikler:
+1. **`async` callback → normal callback:** Async callback kaldırıldı
+2. **`await` → Promise chains:** `await` yerine `.then()` ve `.catch()` kullanıldı
+3. **Server object assignment:** `const server = app.listen(...)`
+4. **Server export:** `export { server }` eklendi
+
+#### Test Sonucu:
+```bash
+PS> netstat -ano | findstr :3000
+TCP    0.0.0.0:3000           0.0.0.0:0              LISTENING       1664
+TCP    [::]:3000              [::]:0                 LISTENING       1664
+```
+
+**API Test:**
+```bash
+PS> Invoke-RestMethod -Uri "http://localhost:3000/api/ai/prompt" -Method POST ...
+
+status  prompt                                    response
+------  ------                                    --------
+success Sen bir dedektif oyunu AI'ısın. Tanıt... Merhaba! Ben bir dedektif oyunu yapay zekasıyım...
+```
+
+✅ **Server artık sürekli çalışıyor!**
+
+---
+
+### ❌ Hata #6: Gemini API Key Endişesi (Yanlış Alarm)
+
+**Zaman:** 17:40  
+**Adım:** Step 1.4 - Gemini AI Integration  
+**Durum:** ✅ Sorun Yok (Yanlış Alarm)
+
+#### Kullanıcı Endişesi:
+> "bu hatayı alıyorsun ne hatası bu. belki benim oluştruduğum api key ile alakalı olabilir mi?"
+
+#### Analiz:
+**API Key ile ilgili DEĞİL! ✅**
+
+Kanıtlar:
+1. ✅ Gemini bağlantı testi başarılı: `✅ Gemini AI connection successful!`
+2. ✅ Test prompt yanıt aldı: `'Say "Hello" if you can hear me.'` → başarılı
+3. ✅ Türkçe prompt test edildi: Dedektif tanıtımı aldık
+4. ✅ API key `.env` dosyasında doğru yüklendi
+5. ✅ API key `.gitignore` ile korunuyor
+
+#### Gerçek Sorun:
+**Server erken kapanma (#5 Hata)** - Yukarıda çözüldü
+
+Hata mesajı:
+```
+Invoke-RestMethod : Uzak sunucuya bağlanılamıyor
+```
+
+Bu hata API key'den DEĞİL, **server'ın çalışmamasından** kaynaklanıyordu.
+
+#### API Key Güvenlik Kontrolü:
+
+**.gitignore kontrolleri:**
+```
+# Backend .gitignore
+.env
+.env.local
+.env.*.local
+
+# Root .gitignore  
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+```
+
+✅ `.env` dosyası **kesinlikle** ignore ediliyor  
+✅ API key GitHub'a push edilmeyecek
+
+#### Çözüm:
+**Sorun değildi!** API key mükemmel çalışıyor. Gerçek sorun server lifetime yönetimiydi.
+
+---
+
+## 📊 Hata İstatistikleri
+
 **Toplam Hata:** 3  
 **Çözülen:** 3  
 **Bekleyen:** 0  
@@ -319,17 +560,50 @@ export async function testDatabaseConnection(): Promise<boolean> {
 - Global stiller için düz CSS daha stabil
 - `@apply` yerine component içinde utility class kullanımı daha modern
 
+### 4. Gemini AI Model İsimlendirme
+- Google Gemini model adları sıkça değişiyor
+- `gemini-pro` deprecated oldu
+- Güncel model: `gemini-2.5-flash` (Ekim 2025)
+- Her zaman Google AI Studio'dan güncel model listesini kontrol et
+- Model adı 404 hatası alıyorsan, yeni modelleri dene
+
+### 5. Node.js Server Lifecycle Yönetimi
+- **Kritik:** `app.listen()` callback'i `async` olmamalı!
+- Async callback tamamlandığında Node.js script'i exit edebilir
+- Server object'ini bir değişkene ata: `const server = app.listen(...)`
+- Server object'ini export et: `export { server }`
+- Startup test'leri non-blocking Promise chains kullanmalı (`.then()/.catch()`)
+- `await` yerine Promise kullanımı server lifetime'ı koruyor
+
+### 6. Database Connection Test Yaklaşımı
+- Olmayan tabloları sorgulama - yanıltıcı hata mesajları verir
+- RPC fonksiyonları (`supabase.rpc('version')`) her zaman mevcuttur
+- Hata kodlarını kontrol et: `PGRST116` = "table not found" (Normal!)
+- "Teknik olarak doğru" ≠ "Kullanıcı dostu hata mesajı"
+
+### 7. API Key Güvenliği
+- `.env` dosyalarını **mutlaka** `.gitignore`'a ekle
+- Hem root hem de subdirectory'lerde `.gitignore` kontrol et
+- API key'leri asla hardcode etme
+- Environment variable yüklendiğini startup'ta doğrula
+- `dotenv.config()` her servis dosyasında çağrılabilir (safe)
+
 ---
 
 ## 🔍 Gelecek için Notlar
 
-- [ ] Tailwind CSS versiyonunu package.json'da sabit tut (v4.x yerine ^4.0.0)
-- [ ] Component'lerde `@apply` yerine direkt utility class kullan
-- [ ] Global stiller minimal tutalım
-- [ ] Her büyük dependency için changelog'u oku
+- [x] Tailwind CSS versiyonunu package.json'da sabit tut
+- [x] Component'lerde `@apply` yerine direkt utility class kullan
+- [x] Global stiller minimal tutalım
+- [x] Her büyük dependency için changelog'u oku
+- [x] Gemini model adlarını Google AI Studio'dan kontrol et
+- [x] Server lifecycle'ı için async callback kullanma
+- [x] Database test'lerinde RPC kullan
+- [x] `.env` dosyalarını Git'e pushlamadığını her zaman doğrula
+- [ ] Production'da environment variable'ları hosting platformunda ayarla
 
 ---
 
-**Son Güncelleme:** 24 Ekim 2025, 15:51  
+**Son Güncelleme:** 24 Ekim 2025, 17:45  
 **Güncelleyen:** AI Assistant  
-**Proje Durumu:** Step 1.1 tamamlandı, hatalar çözüldü ✅
+**Proje Durumu:** Step 1.4 tamamlandı, tüm hatalar çözüldü ✅
