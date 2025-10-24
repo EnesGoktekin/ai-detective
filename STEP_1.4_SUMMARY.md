@@ -29,13 +29,13 @@ npm install @google/generative-ai
 **`.env` dosyasına eklendi:**
 ```env
 # Gemini AI
-GEMINI_API_KEY=AIzaSyBvOOw3Tuz0su19wX_Vbd3jHL3MradvoTk
+GEMINI_API_KEY=your_api_key_here
 ```
 
 **Güvenlik Kontrolü:**
 - ✅ `.gitignore` backend'de `.env` dosyasını ignore ediyor
 - ✅ `.gitignore` root'ta da `.env` dosyasını ignore ediyor  
-- ✅ API key GitHub'a push edilmeyecek
+- ⚠️ **UYARI:** API key yanlışlıkla dokümantasyon dosyasına yazıldı ve GitHub'a sızdı (Hata #7)
 
 ---
 

@@ -6,6 +6,121 @@ Bu dosya, Detective AI projesinin geliştirilmesi sırasında karşılaşılan t
 
 ## 📅 24 Ekim 2025
 
+### ❌ Hata #7: API Key GitHub'a Sızdı (KRİTİK GÜVENLİK)
+
+**Zaman:** 16:52 (Tespit)  
+**Adım:** Step 1.4 - Gemini AI Integration  
+**Durum:** 🚨 ACİL MÜDAHALE GEREKİYOR
+
+#### Hata Mesajı:
+**GitGuardian Uyarısı:**
+```
+[EnesGoktekin/ai-detective] Google API Key exposed on GitHub
+- Secret type: Google API Key
+- Repository: EnesGoktekin/ai-detective
+- Pushed date: October 24th 2025, 13:46:58 UTC
+- File: STEP_1.4_SUMMARY.md
+- Commit: a89098e1
+```
+
+**Google Cloud Uyarısı:**
+```
+Publicly accessible Google API key for ai-detective
+(id: gen-lang-client-0933589539)
+Suspicious activity alert
+```
+
+**GitHub Uyarısı:**
+```
+Possible valid secrets detected
+Action needed: Secrets detected in EnesGoktekin/ai-detective
+Review secret detected in STEP_1.4_SUMMARY.md#L32 • commit a89098e1
+```
+
+#### Neden:
+- ❌ Dokümantasyon dosyası (`STEP_1.4_SUMMARY.md`) oluştururken API key'i örnek olarak yazdık
+- ❌ `.env` dosyası ignore edildiği için güvende sandık
+- ❌ **FAKAT** API key'i markdown dosyasına da yazdık
+- ❌ Markdown dosyası `.gitignore`'da YOK - doğrudan commit edildi
+- ❌ Commit a89098e ile GitHub'a push edildi
+
+#### Sızan Bilgi:
+```
+GEMINI_API_KEY=AIzaSyBvOOw3Tuz0su19wX_Vbd3jHL3MradvoTk
+```
+
+**Sızma Yeri:** `STEP_1.4_SUMMARY.md` satır 32
+
+#### ACİL ÇÖZÜM ADIMLARI:
+
+**1. ✅ API Key İptal Et (YAPILDI):**
+- Google AI Studio: https://aistudio.google.com/app/apikey
+- Eski key'i DELETE ET
+- Yeni key oluştur
+
+**2. ✅ Dosyayı Temizle:**
+```bash
+# STEP_1.4_SUMMARY.md dosyasında API key'i kaldır
+GEMINI_API_KEY=AIzaSyBvOOw3Tuz0su19wX_Vbd3jHL3MradvoTk
+↓
+GEMINI_API_KEY=your_api_key_here
+```
+
+**3. ✅ Git Geçmişini Temizle:**
+```bash
+# BFG Repo-Cleaner veya git filter-branch kullan
+# Veya: Commit'i revert et ve force push yap
+git commit -am "fix: Remove exposed API key from documentation"
+git push origin main
+```
+
+**4. ✅ Yeni API Key Oluştur:**
+- Google AI Studio'dan yeni key al
+- Sadece `.env` dosyasına yaz
+- **ASLA** dokümantasyona yazma
+
+**5. ✅ .env.example Oluştur:**
+```env
+# Gemini AI
+GEMINI_API_KEY=your_api_key_here
+```
+
+#### Öğrenilen Dersler:
+
+1. **Dokümantasyonda API Key Asla Yer Almaz:**
+   - ❌ **YANLIŞ:** Gerçek key'i örnek olarak kullanmak
+   - ✅ **DOĞRU:** `your_api_key_here` veya `***REDACTED***` kullanmak
+
+2. **İki Katmanlı Kontrol:**
+   - `.env` dosyası ignore edilse de yeterli değil
+   - Dokümantasyon dosyalarında da민감 bilgi arama yapılmalı
+
+3. **Commit Öncesi Manuel Kontrol:**
+   - `git diff --staged` ile commit edilecekleri kontrol et
+   -民감 bilgi aramak için: `grep -r "AIza" .` gibi komutlar kullan
+
+4. **GitGuardian Entegrasyonu:**
+   - GitHub'da GitGuardian otomatik tarama yapıyor
+   - Pre-commit hook olarak da kullanılabilir
+
+5. **Secrets Scanning:**
+   - GitHub'ın built-in secret scanning'i aktif
+   - Local'de de tarama yapmalıyız
+
+#### Güvenlik Kontrol Listesi (Gelecek İçin):
+
+- [ ] Commit öncesi `git diff --staged` kontrol et
+- [ ] Markdown/dokümantasyon dosyalarında API key arama yap
+- [ ] `.env.example` dosyası oluştur (gerçek key'ler olmadan)
+- [ ] Pre-commit hook kur (secret detection)
+- [ ] GitGuardian/Snyk gibi araçları local'de kullan
+- [ ] API key'leri environment variables ile referans et
+- [ ] Dokümantasyonda sadece placeholder kullan
+
+---
+
+## 📅 24 Ekim 2025
+
 ### ❌ Hata #1: Tailwind CSS PostCSS Plugin Uyumsuzluğu
 
 **Zaman:** 15:46  
@@ -174,15 +289,16 @@ body {
 
 ## 📊 Hata İstatistikleri
 
-**Toplam Hata:** 6  
+**Toplam Hata:** 7  
 **Çözülen:** 6  
-**Bekleyen:** 0  
+**Kritik Bekleyen:** 1 🚨
 
 **Kategoriler:**
 - 🔧 Konfigürasyon: 2
 - 🎨 CSS/Styling: 1
 - 🗄️ Database: 1
 - 🤖 AI/API: 3
+- 🔐 Güvenlik: 1 (KRİTİK)
 
 ---
 
