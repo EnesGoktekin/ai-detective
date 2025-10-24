@@ -46,7 +46,7 @@ Review secret detected in STEP_1.4_SUMMARY.md#L32 • commit a89098e1
 
 #### Sızan Bilgi:
 ```
-GEMINI_API_KEY=AIzaSyBvOOw3Tuz0su19wX_Vbd3jHL3MradvoTk
+GEMINI_API_KEY=***REDACTED***
 ```
 
 **Sızma Yeri:** `STEP_1.4_SUMMARY.md` satır 32
@@ -55,13 +55,13 @@ GEMINI_API_KEY=AIzaSyBvOOw3Tuz0su19wX_Vbd3jHL3MradvoTk
 
 **1. ✅ API Key İptal Et (Kullanıcı Tarafından YAPILDI):**
 - Google AI Studio: https://aistudio.google.com/app/apikey
-- Eski key silindi: `AIzaSyBvOOw3Tuz0su19wX_Vbd3jHL3MradvoTk`
-- Yeni key oluşturuldu: `AIzaSyA6JmB7HrX-j0rKIY2ThQY813uxDhr5I1Q`
+- Eski key silindi: `***REDACTED***`
+- Yeni key oluşturuldu: `***REDACTED***`
 
 **2. ✅ Dosyayı Temizle (YAPILDI):**
 ```bash
 # STEP_1.4_SUMMARY.md dosyasında API key'i kaldırıldı
-GEMINI_API_KEY=AIzaSyBvOOw3Tuz0su19wX_Vbd3jHL3MradvoTk
+GEMINI_API_KEY=***REDACTED***
 ↓
 GEMINI_API_KEY=your_api_key_here
 ```
@@ -70,14 +70,14 @@ GEMINI_API_KEY=your_api_key_here
 **3. ✅ Yeni API Key'i .env'ye Ekle (YAPILDI):**
 ```bash
 # backend/.env dosyasına yeni key eklendi
-GEMINI_API_KEY=AIzaSyA6JmB7HrX-j0rKIY2ThQY813uxDhr5I1Q
+GEMINI_API_KEY=***REDACTED***
 ```
 **Test Sonucu:** ✅ Gemini AI connection successful!
 
 **4. ✅ Güvenlik Kontrolü (YAPILDI):**
 ```bash
 # Yeni key'in sadece .env'de olduğu doğrulandı
-grep -r "AIzaSyA6JmB7HrX" .
+grep -r "AIza" .
 # Sonuç: Sadece backend/.env (ignored file)
 ```
 
