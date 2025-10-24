@@ -26,14 +26,24 @@ export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey, {
 // Test database connection
 export async function testDatabaseConnection(): Promise<boolean> {
   try {
-    // Simple query to test connection
-    const { error } = await supabase.from('_test_').select('*').limit(1);
+    // Use Supabase's built-in health check
+    // This queries the postgres version which always exists
+    const { error } = await supabase.rpc('version');
     
-    // If table doesn't exist, that's fine - connection works
-    // If connection fails, we'll get a different error
-    if (error && !error.message.includes('does not exist')) {
-      console.error('❌ Database connection failed:', error.message);
-      return false;
+    // If we can't call RPC, try a simpler approach
+    if (error) {
+      // Alternative: Check if we can access the schema
+      const { error: schemaError } = await supabase
+        .from('_health_check_')
+        .select('*')
+        .limit(0); // Don't actually fetch data
+      
+      // Table not found is OK - it means we connected successfully
+      // Any other error means connection failed
+      if (schemaError && schemaError.code !== 'PGRST116') {
+        console.error('❌ Database connection failed:', schemaError.message);
+        return false;
+      }
     }
     
     console.info('✅ Database connection successful!');
