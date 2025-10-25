@@ -56,110 +56,119 @@
 
 ## 🗄️ Phase 2: Database Schema & Core Data
 
-### Step 2.1: Design Database Schema
-- **Goal:** Create complete database schema document
-- **Tasks:**
-  - Document all tables and their columns
-  - Define relationships and foreign keys
-  - Plan indexes for performance
-  - Document RLS policies needed
-- **Test:** Review schema for completeness
-- **Deliverable:** Database schema document
+**Note:** Database schema has been designed with separation of Static Case Data and Dynamic Game State.
 
-### Step 2.2: Create Cases Table
-- **Goal:** Store case metadata
+### Step 2.1: Create Cases Table (Static)
+- **Goal:** Store case metadata and AI initial context
 - **Tasks:**
   - Create `cases` table with fields:
     - id (UUID, primary key)
     - title (text)
     - description (text)
     - difficulty_level (text)
+    - initial_prompt_data (JSONB: Full system prompt/initial scene for AI)
+    - suspects_list (JSONB: Simple list of suspect names for frontend UI)
     - created_at (timestamp)
   - Add sample data for testing
 - **Test:** Query table and retrieve data
 - **Deliverable:** Cases table with test data
 
-### Step 2.3: Create Suspects Table
-- **Goal:** Store suspect information
+### Step 2.2: Create Suspects Table (Static)
+- **Goal:** Store suspect profiles with truth-blind flag
 - **Tasks:**
   - Create `suspects` table with fields:
     - id (UUID, primary key)
     - case_id (UUID, foreign key)
     - name (text)
     - description (text)
-    - backstory (text)
-    - is_guilty (boolean)
+    - backstory (TEXT: Detailed info for AI knowledge)
+    - is_guilty (BOOL: Truth-blind flag, TRUE if killer)
   - Add sample suspects for test case
 - **Test:** Query with case relationship
 - **Deliverable:** Suspects table with test data
 
-### Step 2.4: Create Evidence Table
-- **Goal:** Store evidence items
+### Step 2.3: Create Scene Objects Table (Static)
+- **Goal:** Define physical, interactive locations/objects in crime scene
 - **Tasks:**
-  - Create `evidence` table with fields:
+  - Create `scene_objects` table with fields:
     - id (UUID, primary key)
     - case_id (UUID, foreign key)
     - name (text)
+    - main_location (text)
+    - initial_description (TEXT: Used by AI to describe before search)
+    - created_at (timestamp)
+  - Add sample objects for test case
+- **Test:** Query objects by case
+- **Deliverable:** Scene objects table with test data
+
+### Step 2.4: Create Evidence Lookup Table (Static)
+- **Goal:** Define all potential clues for game progression
+- **Tasks:**
+  - Create `evidence_lookup` table with fields:
+    - id (UUID, primary key)
+    - case_id (UUID, foreign key)
+    - object_id (UUID, foreign key: Links to scene_object)
+    - name (text)
     - description (text)
-    - unlock_keywords (text array)
+    - unlock_keywords (TEXT[]: Secondary keywords for AI discovery)
+    - is_required_for_accusation (BOOL: Must be unlocked to enable accusation)
     - category (text)
     - order_index (integer)
   - Add sample evidence for test case
-- **Test:** Query evidence with keywords
-- **Deliverable:** Evidence table with test data
+- **Test:** Query evidence with keywords and required flag
+- **Deliverable:** Evidence lookup table with test data
 
-### Step 2.5: Create Game Sessions Table
-- **Goal:** Track user game sessions
+### Step 2.5: Create Games Table (Dynamic)
+- **Goal:** Session hub tracking overall game progress and AI context
 - **Tasks:**
-  - Create `game_sessions` table with fields:
+  - Create `games` table with fields:
     - id (UUID, primary key)
     - case_id (UUID, foreign key)
     - session_token (text, unique)
+    - current_summary (TEXT: AI Context, stores most recent summary)
+    - message_count (INT: Triggers summarizing AI every 5 user messages)
+    - is_completed (boolean)
+    - accused_suspect_id (UUID, nullable)
     - created_at (timestamp)
     - updated_at (timestamp)
-    - is_complete (boolean)
-    - accused_suspect_id (UUID, nullable)
   - Create index on session_token
 - **Test:** Insert and query session
-- **Deliverable:** Game sessions table
+- **Deliverable:** Games table
 
-### Step 2.6: Create Chat History Table
-- **Goal:** Store conversation messages
+### Step 2.6: Create Messages Table (Dynamic)
+- **Goal:** Store full, ordered chat history
 - **Tasks:**
-  - Create `chat_messages` table with fields:
+  - Create `messages` table with fields:
     - id (UUID, primary key)
-    - session_id (UUID, foreign key)
-    - role (text: 'user' or 'assistant')
+    - game_id (UUID, foreign key)
+    - sequence_number (INT: MANDATORY for ordering and last 5 retrieval)
+    - sender (text: 'user' or 'ai')
     - content (text)
     - created_at (timestamp)
-    - message_index (integer)
-  - Create index on session_id and message_index
-- **Test:** Insert and retrieve messages
-- **Deliverable:** Chat history table
+  - Create index on game_id and sequence_number
+- **Test:** Insert and retrieve messages in order
+- **Deliverable:** Messages table
 
-### Step 2.7: Create Evidence Unlocks Table
-- **Goal:** Track discovered evidence per session
+### Step 2.7: Create Evidence Unlocked Table (Dynamic)
+- **Goal:** Track player discovery status
 - **Tasks:**
-  - Create `evidence_unlocks` table with fields:
+  - Create `evidence_unlocked` table with fields:
     - id (UUID, primary key)
-    - session_id (UUID, foreign key)
-    - evidence_id (UUID, foreign key)
+    - game_id (UUID, foreign key)
+    - evidence_id (UUID, foreign key: Links to evidence_lookup)
     - unlocked_at (timestamp)
-  - Create compound unique constraint (session_id, evidence_id)
+  - Create compound unique constraint (game_id, evidence_id)
 - **Test:** Insert and query unlocked evidence
-- **Deliverable:** Evidence unlocks table
+- **Deliverable:** Evidence unlocked table
 
-### Step 2.8: Create Summaries Table
-- **Goal:** Store conversation summaries
+### Step 2.8: Add TypeScript Type Definitions
+- **Goal:** Create TypeScript interfaces for all tables
 - **Tasks:**
-  - Create `chat_summaries` table with fields:
-    - id (UUID, primary key)
-    - session_id (UUID, foreign key)
-    - summary_text (text)
-    - message_count_at_summary (integer)
-    - created_at (timestamp)
-- **Test:** Insert and retrieve summaries
-- **Deliverable:** Summaries table
+  - Create type definitions for all static tables
+  - Create type definitions for all dynamic tables
+  - Export types from central types file
+- **Test:** Import and use types in backend code
+- **Deliverable:** Complete TypeScript type definitions
 
 ---
 

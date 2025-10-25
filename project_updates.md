@@ -62,13 +62,13 @@
 - [x] Step 1.4: Gemini AI integration
 
 #### Phase 2: Database Schema (Next)
-- [ ] Step 2.1: Create Cases table
-- [ ] Step 2.2: Create Clues table
-- [ ] Step 2.3: Create Characters table
-- [ ] Step 2.4: Create GameSessions table
-- [ ] Step 2.5: Create ChatHistory table
-- [ ] Step 2.6: Create Summaries table
-- [ ] Step 2.7: Setup database relationships
+- [ ] Step 2.1: Create Cases table (Static)
+- [ ] Step 2.2: Create Suspects table (Static)
+- [ ] Step 2.3: Create Scene Objects table (Static)
+- [ ] Step 2.4: Create Evidence Lookup table (Static)
+- [ ] Step 2.5: Create Games table (Dynamic)
+- [ ] Step 2.6: Create Messages table (Dynamic)
+- [ ] Step 2.7: Create Evidence Unlocked table (Dynamic)
 - [ ] Step 2.8: Add TypeScript type definitions
 
 ### ❌ Missing / Not Started
@@ -103,14 +103,16 @@
 - [ ] Error handling and logging
 
 #### Database (Supabase)
-- [ ] Database schema design
-- [ ] Tables creation:
-  - Cases table
-  - Evidence table
-  - Suspects table
-  - Game sessions table
-  - Chat history table
-  - Summaries table
+- [ ] Database schema design (completed by user)
+- [ ] Static Tables creation:
+  - Cases table (with initial_prompt_data, suspects_list)
+  - Suspects table (with backstory, is_guilty)
+  - Scene Objects table (with main_location, initial_description)
+  - Evidence Lookup table (with object_id, unlock_keywords, is_required_for_accusation)
+- [ ] Dynamic Tables creation:
+  - Games table (with current_summary, message_count)
+  - Messages table (with sequence_number)
+  - Evidence Unlocked table
 - [ ] Database relationships setup
 - [ ] RLS (Row Level Security) policies
 - [ ] Database migrations
@@ -248,7 +250,10 @@
 - **Monolingual UI:** MVP will have single language UI
 - **Multilingual Chat:** AI will support multiple languages in chat
 - **Message Queue:** Only last 5 user & AI messages sent to AI (+ summary)
-- **Summary Frequency:** Every 5 user messages trigger a new summary
+- **Summary Frequency:** Every 5 user messages trigger a new summary (overwrites previous)
+- **Database Architecture:** Separates Static Case Data from Dynamic Game State
+- **AI Context Management:** Uses current_summary field + last 5 messages
+- **Accusation Logic:** Compares evidence_unlocked count against required evidence in evidence_lookup
 
 ---
 
