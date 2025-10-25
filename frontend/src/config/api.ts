@@ -4,7 +4,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:30
 export const API_ENDPOINTS = {
   cases: '/api/cases',
   games: '/api/games',
-  chat: '/api/chat',
+  chat: '/api/games', // Chat is nested under games: /api/games/:game_id/chat
   evidence: '/api/evidence',
   accusation: '/api/accusation',
   messages: '/api/messages',

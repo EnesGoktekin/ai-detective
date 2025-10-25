@@ -108,7 +108,7 @@ export default function GamePage() {
       setError(null);
 
       // Send message to backend
-      const response = await fetch(buildApiUrl(`/api/chat/${gameId}/chat`), {
+      const response = await fetch(buildApiUrl(`/api/games/${gameId}/chat`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
