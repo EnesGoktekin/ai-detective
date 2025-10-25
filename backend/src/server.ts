@@ -42,7 +42,7 @@ app.use(sanitizeBody);
 // API Routes
 app.use('/api/cases', casesRouter);
 app.use('/api/games', gameRouter);
-app.use('/api/chat', chatRouter);
+app.use('/api/games', chatRouter);  // FIXED: Chat is nested under /games/:game_id/chat
 app.use('/api/evidence', evidenceRouter);
 app.use('/api/accusation', accusationRouter);
 app.use('/api/messages', messagesRouter);
