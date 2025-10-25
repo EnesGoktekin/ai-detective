@@ -104,10 +104,10 @@ export default function AccusationPage() {
 
   if (error && !result) {
     return (
-      <div className="min-h-screen bg-dark-bg flex items-center justify-center p-4">
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center p-3 sm:p-4">
         <Card className="max-w-md w-full text-center">
-          <h2 className="text-2xl font-bold text-red-500 mb-4">Error</h2>
-          <p className="text-gray-300 mb-6">{error}</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-red-500 mb-4">Error</h2>
+          <p className="text-sm sm:text-base text-gray-300 mb-6">{error}</p>
           <Button onClick={() => navigate(`/game/${gameId}`)} fullWidth>
             Back to Game
           </Button>
@@ -119,27 +119,27 @@ export default function AccusationPage() {
   // Show result
   if (result) {
     return (
-      <div className="min-h-screen bg-dark-bg flex items-center justify-center p-4">
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center p-3 sm:p-4">
         <Card className="max-w-2xl w-full">
           <div className="text-center">
             {/* Result Icon */}
-            <div className={`text-6xl mb-4 ${result.correct ? 'animate-bounce' : ''}`}>
+            <div className={`text-4xl sm:text-6xl mb-4 ${result.correct ? 'animate-bounce' : ''}`}>
               {result.correct ? '🎉' : '❌'}
             </div>
 
             {/* Result Title */}
-            <h1 className={`text-3xl font-bold mb-4 ${result.correct ? 'text-green-400' : 'text-red-400'}`}>
+            <h1 className={`text-2xl sm:text-3xl font-bold mb-4 ${result.correct ? 'text-green-400' : 'text-red-400'}`}>
               {result.correct ? 'Case Solved!' : 'Wrong Suspect'}
             </h1>
 
             {/* Result Message */}
-            <p className="text-gray-300 text-lg mb-6 leading-relaxed">
+            <p className="text-gray-300 text-base sm:text-lg mb-6 leading-relaxed">
               {result.message}
             </p>
 
             {/* Suspect Info */}
-            <div className="bg-dark-elevated rounded-lg p-4 mb-6">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="bg-dark-elevated rounded-lg p-3 sm:p-4 mb-6">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                 <div>
                   <span className="text-gray-500">You accused:</span>
                   <p className="text-gold-500 font-semibold">{result.accused_suspect}</p>
@@ -152,7 +152,7 @@ export default function AccusationPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Button 
                 variant="secondary"
                 onClick={() => navigate('/')}
@@ -176,25 +176,25 @@ export default function AccusationPage() {
 
   // Show accusation form
   return (
-    <div className="min-h-screen bg-dark-bg flex items-center justify-center p-4">
+    <div className="min-h-screen bg-dark-bg flex items-center justify-center p-3 sm:p-4">
       <Card className="max-w-4xl w-full">
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-gold-500 mb-2">
+        <div className="text-center mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gold-500 mb-2">
             Make Your Accusation
           </h1>
-          <p className="text-gray-400">
+          <p className="text-sm sm:text-base text-gray-400">
             Choose the suspect you believe is guilty
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
-            <p className="text-red-400 text-sm">{error}</p>
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+            <p className="text-red-400 text-xs sm:text-sm">{error}</p>
           </div>
         )}
 
         {/* Suspects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {suspects.map((suspect) => (
             <Card
               key={suspect.suspect_id}

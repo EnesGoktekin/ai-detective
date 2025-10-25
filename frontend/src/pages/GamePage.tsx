@@ -167,37 +167,51 @@ export default function GamePage() {
 
   return (
     <div className="min-h-screen max-h-screen bg-dark-bg flex flex-col overflow-hidden">
-      {/* Header */}
-      <header className="bg-dark-surface border-b border-dark-border px-4 py-3 flex items-center justify-between">
-        <div className="flex-1 flex items-center gap-3">
+      {/* Header - Mobile Optimized */}
+      <header className="bg-dark-surface border-b border-dark-border px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2 flex-shrink-0">
+        <div className="flex-1 flex items-center gap-2 sm:gap-3 min-w-0">
           <Button 
             variant="ghost" 
             size="sm"
             onClick={() => setShowExitConfirm(true)}
-            className="text-gray-400 hover:text-gold-500"
+            className="text-gray-400 hover:text-gold-500 shrink-0"
           >
-            ← Exit
+            ← <span className="hidden sm:inline">Exit</span>
           </Button>
-          <div>
-            <h1 className="text-xl font-bold text-gold-500">{gameData?.case_title}</h1>
-            <p className="text-sm text-gray-400">Game ID: {gameData?.game_id?.slice(0, 8)}...</p>
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-xl font-bold text-gold-500 truncate">{gameData?.case_title}</h1>
+            <p className="text-xs sm:text-sm text-gray-400 truncate">ID: {gameData?.game_id?.slice(0, 8)}...</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1 sm:gap-2 shrink-0">
+          {/* Desktop: Full text, Mobile: Icon only */}
           <Button 
             variant="secondary" 
             size="sm"
             onClick={() => setShowHowToPlay(true)}
+            className="hidden sm:inline-flex"
+            aria-label="How to Play"
           >
             How to Play
+          </Button>
+          <Button 
+            variant="secondary" 
+            size="sm"
+            onClick={() => setShowHowToPlay(true)}
+            className="sm:hidden w-8 h-8 p-0 flex items-center justify-center"
+            aria-label="How to Play"
+          >
+            ?
           </Button>
           <Button 
             variant="primary" 
             size="sm"
             onClick={handleMakeAccusation}
             disabled={!canAccuse}
+            className="whitespace-nowrap text-xs sm:text-sm"
           >
-            Make Accusation
+            <span className="hidden sm:inline">Make Accusation</span>
+            <span className="sm:hidden">Accuse</span>
           </Button>
         </div>
       </header>
@@ -212,8 +226,8 @@ export default function GamePage() {
             error={error}
           />
 
-          {/* Chat Input Area */}
-          <div className="border-t border-dark-border p-4 bg-dark-surface">
+          {/* Chat Input Area - Mobile Optimized */}
+          <div className="border-t border-dark-border p-2 sm:p-4 bg-dark-surface">
             <div className="max-w-4xl mx-auto">
               <ChatInput 
                 onSendMessage={handleSendMessage}
@@ -224,8 +238,8 @@ export default function GamePage() {
           </div>
         </main>
 
-        {/* Evidence Sidebar */}
-        <aside className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-dark-border bg-dark-surface overflow-y-auto evidence-scroll">
+        {/* Evidence Sidebar - Desktop Only (hidden on mobile for better chat focus) */}
+        <aside className="hidden lg:block lg:w-80 border-l border-dark-border bg-dark-surface overflow-y-auto evidence-scroll">
           <div className="p-4 space-y-6">
             {/* Suspects Section */}
             {gameData?.case_id && (
