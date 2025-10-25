@@ -73,11 +73,18 @@ body {
   scrollbar-color: #5C4E00 #1a1a1a;
 }
 
-/* Scrollbar for specific sections */
+/* Hide scrollbar for specific sections but keep scrolling enabled */
+.evidence-scroll {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.evidence-scroll::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Scrollbar for chat section - visible with gold theme */
 .chat-scroll::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #8A7500 0%, #5C4E00 100%);
 }
 
-.evidence-scroll::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #B89D00 0%, #8A7500 100%);
-}
