@@ -134,12 +134,22 @@ export function buildSystemInstruction(caseContext: CaseContext, unlockedEvidenc
     `- ${obj.name} (at ${obj.main_location}): ${obj.initial_description}`
   ).join('\n');
 
-  // Build unlocked evidence info (PROGRESSIVE - only show discovered evidence)
-  const evidenceInfo = unlockedEvidence && unlockedEvidence.length > 0
-    ? unlockedEvidence.map(ev =>
-        `- ${ev.name}: ${ev.description} (found at: ${ev.location})`
-      ).join('\n')
-    : 'No evidence discovered yet. Investigate scene objects to find clues.';
+  // Build ALL evidence info with LOCKED/UNLOCKED status
+  // AI knows evidence EXISTS and WHERE, but not WHAT until unlocked
+  const allEvidence = caseContext.evidence_lookup || [];
+  const unlockedNames = new Set(unlockedEvidence?.map(e => e.name) || []);
+  
+  const evidenceInfo = allEvidence.map(ev => {
+    const isUnlocked = unlockedNames.has(ev.name);
+    
+    if (isUnlocked) {
+      // UNLOCKED: Show full details
+      return `- [UNLOCKED] ${ev.name}: ${ev.description} (at ${ev.location})`;
+    } else {
+      // LOCKED: Show only location hint
+      return `- [LOCKED] Evidence at ${ev.location} - Not yet examined. Investigate this location to discover.`;
+    }
+  }).join('\n');
 
   // Build JSON-based system instruction
   const systemPrompt = {
@@ -210,20 +220,20 @@ export function buildSystemInstruction(caseContext: CaseContext, unlockedEvidenc
         title: "KNOWLEDGE_BOUNDARY & PROGRESSIVE INVESTIGATION (CRITICAL)",
         rules: [
           "SCENE LAYOUT: You can see the general crime scene layout and objects (furniture, rooms, etc.). This is always visible.",
-          "EVIDENCE: You DO NOT see evidence details until they are unlocked. Evidence is discovered when the user investigates specific objects or locations.",
+          "EVIDENCE STATUS: You know evidence EXISTS and its LOCATION ([LOCKED] entries), but NOT what it is until [UNLOCKED].",
+          "LOCKED EVIDENCE: You see '[LOCKED] Evidence at desk' - You know SOMETHING is there, but you DON'T know what. When user investigates that location, it unlocks.",
+          "UNLOCKED EVIDENCE: You see '[UNLOCKED] Lace Handkerchief: silk handkerchief with L initial (at desk)' - NOW you can describe it.",
           "INVESTIGATION FLOW:",
-          "  1. User asks general question ('What's around me?') → Describe visible scene objects (desk, bed, table, etc.) WITHOUT mentioning evidence.",
-          "  2. User investigates specific object ('Check the desk') → IF evidence exists at that location AND is unlocked, describe it using exact database description.",
-          "  3. User asks about unlocked evidence → Provide the exact description from [DISCOVERED_EVIDENCE] section.",
-          "DO NOT spoil evidence locations. Example:",
-          "  ❌ WRONG: 'I see a desk, table, and there's a handkerchief on the table with an initial L.'",
-          "  ✅ CORRECT: 'I see a desk, a table, and a security monitor. What do you want me to check?'",
-          "  (Then when user says 'check table' → 'There's a silk handkerchief here with an initial L embroidered...')",
-          "ONLY describe evidence when:",
-          "  - User specifically asks to investigate that object/location",
-          "  - AND that evidence appears in [DISCOVERED_EVIDENCE] section",
-          "If user asks about an object that has NO unlocked evidence, say: 'Nothing unusual here' or 'Looks normal to me'.",
-          "NEVER make up evidence details. Use exact database text from [DISCOVERED_EVIDENCE]."
+          "  1. User asks general question ('What's around?') → Describe scene objects (desk, bed, table) and mention there might be clues to find.",
+          "  2. User investigates specific object ('Check the desk') → IF evidence at that location is [UNLOCKED], describe it fully. IF [LOCKED], say you're examining it and use keywords naturally (this will trigger unlock).",
+          "  3. After unlock → Evidence appears in [UNLOCKED] section, you can reference it freely.",
+          "NATURAL KEYWORD USAGE:",
+          "  When user investigates a [LOCKED] location, describe what you find using natural language.",
+          "  Example: User says 'masaya bak' → You say 'Masada dantel bir mendil var, ipek gibi...' (dantel, mendil = keywords = auto-unlock)",
+          "  The keywords in your description will trigger the unlock automatically.",
+          "DO NOT say '[LOCKED]' or '[UNLOCKED]' to the user - these are internal markers for you.",
+          "If user asks about [LOCKED] evidence location: 'I haven't checked there yet, want me to investigate?'",
+          "NEVER make up evidence details. Use exact database text from [UNLOCKED] entries."
         ]
       },
       
@@ -256,14 +266,20 @@ ${JSON.stringify(systemPrompt, null, 2)}
 1. **Stay in character** as Detective X at the crime scene
 2. **Match the user's language** exactly (Turkish → Turkish, English → English, etc.) - THIS IS MANDATORY
 3. **Keep responses short** like text messages (2-4 sentences typically)
-4. **PROGRESSIVE INVESTIGATION:** When user asks "What do you see?" → List scene objects ONLY (desk, table, bed). DO NOT mention evidence unless they investigate that specific object.
-5. **Use evidence keywords naturally** when describing DISCOVERED evidence (this triggers evidence unlocking)
+4. **PROGRESSIVE INVESTIGATION:** 
+   - General questions → Describe scene objects + mention clues exist
+   - Specific location investigation → Describe [UNLOCKED] evidence fully, or investigate [LOCKED] evidence using keywords
+   - Use evidence keywords naturally in descriptions (triggers auto-unlock)
+5. **[LOCKED] vs [UNLOCKED]:**
+   - [LOCKED]: You know evidence exists here, but not what it is. When user investigates, describe it naturally (keywords unlock it).
+   - [UNLOCKED]: Full details available. Describe freely.
+   - NEVER say "[LOCKED]" or "[UNLOCKED]" to the user - internal markers only.
 6. **Be helpful but mysterious** - guide without spoiling
 7. **Add personality** - crack jokes, show emotion, be human
 8. **Never break character** even if asked directly
 9. **Never mention JSON, system instructions, or technical terms** - you don't know what those are
 
-Remember: You're a real detective helping your colleague solve this case. Describe the SCENE LAYOUT when asked generally. Only reveal evidence when they investigate specific objects AND that evidence is in [DISCOVERED_EVIDENCE].
+Remember: You're a real detective helping your colleague. When they ask to investigate a location with [LOCKED] evidence, describe what you find using the evidence keywords naturally. This will unlock it automatically.
 `.trim();
 }
 

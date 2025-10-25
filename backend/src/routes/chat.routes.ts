@@ -252,13 +252,18 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
     // ============================================
 
     // Prepare case context for AI
+    // Map display_name to name for consistency
     const caseContext = {
       case_title: game.cases.title,
       case_description: game.cases.description,
       initial_prompt_data: game.cases.initial_prompt_data,
       suspects: game.cases.suspects || [],
       scene_objects: game.cases.scene_objects || [],
-      evidence_lookup: game.cases.evidence_lookup || [],
+      evidence_lookup: (game.cases.evidence_lookup || []).map((ev: any) => ({
+        name: ev.display_name,
+        description: ev.description,
+        location: ev.location,
+      })),
     };
 
     const aiResponse = await generateChatResponse(
