@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Loading } from '../components/Loading';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { buildApiUrl } from '@/config/api';
 
 interface Suspect {
@@ -29,6 +30,7 @@ export default function AccusationPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AccusationResult | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   useEffect(() => {
     const fetchSuspects = async () => {
@@ -62,7 +64,12 @@ export default function AccusationPage() {
     }
   }, [gameId]);
 
-  const handleAccuse = async () => {
+  const handleAccuseClick = () => {
+    if (!selectedSuspect) return;
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmAccusation = async () => {
     if (!selectedSuspect || !gameId) return;
 
     try {
@@ -233,7 +240,7 @@ export default function AccusationPage() {
           </Button>
           <Button
             variant="primary"
-            onClick={handleAccuse}
+            onClick={handleAccuseClick}
             disabled={!selectedSuspect || submitting}
             isLoading={submitting}
             fullWidth
@@ -245,6 +252,19 @@ export default function AccusationPage() {
         <p className="text-center text-gray-500 text-xs mt-4">
           ⚠️ Once you make an accusation, the game will end
         </p>
+
+        {/* Accusation Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={showConfirmation}
+          onClose={() => setShowConfirmation(false)}
+          onConfirm={handleConfirmAccusation}
+          title="Confirm Accusation"
+          message={`Are you sure you want to accuse ${suspects.find(s => s.suspect_id === selectedSuspect)?.name}? This will end the game and cannot be undone.`}
+          confirmText="Yes, Accuse"
+          cancelText="No, Go Back"
+          confirmVariant="primary"
+          isDangerous={true}
+        />
       </Card>
     </div>
   );

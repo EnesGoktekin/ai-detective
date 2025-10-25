@@ -4,6 +4,7 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Loading } from '../components/Loading';
 import { HowToPlayModal } from '../components/HowToPlayModal';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { ChatInterface } from '../components/ChatInterface';
 import { ChatInput } from '../components/ChatInput';
 import { EvidenceList } from '../components/EvidenceList';
@@ -36,6 +37,7 @@ export default function GamePage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [canAccuse, setCanAccuse] = useState(false);
 
   useEffect(() => {
@@ -167,9 +169,19 @@ export default function GamePage() {
     <div className="min-h-screen max-h-screen bg-dark-bg flex flex-col overflow-hidden">
       {/* Header */}
       <header className="bg-dark-surface border-b border-dark-border px-4 py-3 flex items-center justify-between">
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-gold-500">{gameData?.case_title}</h1>
-          <p className="text-sm text-gray-400">Game ID: {gameData?.game_id?.slice(0, 8)}...</p>
+        <div className="flex-1 flex items-center gap-3">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setShowExitConfirm(true)}
+            className="text-gray-400 hover:text-gold-500"
+          >
+            ← Exit
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold text-gold-500">{gameData?.case_title}</h1>
+            <p className="text-sm text-gray-400">Game ID: {gameData?.game_id?.slice(0, 8)}...</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -238,6 +250,18 @@ export default function GamePage() {
       <HowToPlayModal 
         isOpen={showHowToPlay} 
         onClose={() => setShowHowToPlay(false)} 
+      />
+
+      {/* Exit Game Confirmation */}
+      <ConfirmationModal
+        isOpen={showExitConfirm}
+        onClose={() => setShowExitConfirm(false)}
+        onConfirm={() => navigate('/')}
+        title="Exit Game"
+        message="Are you sure you want to exit? Your progress will be saved and you can resume later."
+        confirmText="Exit Game"
+        cancelText="Stay"
+        confirmVariant="secondary"
       />
     </div>
   );

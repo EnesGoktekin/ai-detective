@@ -11,3 +11,5 @@ export { ChatInterface } from './ChatInterface';
 export { ChatInput } from './ChatInput';
 export { EvidenceList } from './EvidenceList';
 export { SuspectsList } from './SuspectsList';
+export { ErrorBoundary } from './ErrorBoundary';
+export { ConfirmationModal } from './ConfirmationModal';
