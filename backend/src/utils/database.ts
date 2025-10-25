@@ -29,7 +29,7 @@ export async function testDatabaseConnection(): Promise<boolean> {
     // Test connection by querying the cases table (which should always exist)
     const { error } = await supabase
       .from('cases')
-      .select('id')
+      .select('case_id')
       .limit(1);
     
     if (error) {

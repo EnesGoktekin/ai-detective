@@ -242,6 +242,38 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
     );
 
     // ============================================
+    // STEP 6.5: Detect Evidence in AI Response
+    // ============================================
+
+    // Check AI response for evidence keywords too
+    const evidenceInAIResponse = caseEvidence
+      ? detectEvidenceInMessage(
+          aiResponse, 
+          caseEvidence, 
+          [...alreadyUnlocked, ...newlyDetectedEvidence] // Don't re-unlock what we just unlocked
+        )
+      : [];
+
+    // Unlock evidence detected in AI response
+    if (evidenceInAIResponse.length > 0) {
+      const aiEvidenceToInsert = evidenceInAIResponse.map(evidenceId => ({
+        game_id,
+        evidence_id: evidenceId,
+      }));
+
+      const { error: aiUnlockError } = await supabase
+        .from('evidence_unlocked')
+        .insert(aiEvidenceToInsert);
+
+      if (aiUnlockError) {
+        console.error('Error unlocking evidence from AI response:', aiUnlockError);
+      }
+    }
+
+    // Combine all newly unlocked evidence
+    const allNewlyUnlocked = [...newlyDetectedEvidence, ...evidenceInAIResponse];
+
+    // ============================================
     // STEP 7: Store AI Response
     // ============================================
 
@@ -280,7 +312,7 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
     res.status(200).json({
       success: true,
       ai_response: aiResponse,
-      new_evidence_unlocked: newlyDetectedEvidence,
+      new_evidence_unlocked: allNewlyUnlocked,
       message_count: newMessageCount,
       summary_triggered: summaryTriggered,
     });
