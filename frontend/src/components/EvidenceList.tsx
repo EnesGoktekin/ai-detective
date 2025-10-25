@@ -102,7 +102,13 @@ export const EvidenceList: React.FC<EvidenceListProps> = ({
   onEvidenceUpdate 
 }) => {
   const [evidence, setEvidence] = useState<Evidence[]>([]);
-  const [stats, setStats] = useState<{ unlocked: number; total: number; required: number } | null>(null);
+  const [stats, setStats] = useState<{ 
+    unlocked: number; 
+    total: number; 
+    required: number;
+    requiredUnlocked: number;
+    canAccuse: boolean;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
@@ -131,16 +137,19 @@ export const EvidenceList: React.FC<EvidenceListProps> = ({
         }
         const statsData = await statsResponse.json();
         const newStats = {
-          unlocked: statsData.unlocked_count || 0,
-          total: statsData.total_evidence || 0,
-          required: statsData.required_evidence || 0,
+          unlocked: statsData.stats?.unlocked_count || 0,
+          total: statsData.stats?.total_evidence || 0,
+          required: statsData.stats?.required_count || 0,
+          requiredUnlocked: statsData.stats?.required_unlocked || 0,
+          canAccuse: statsData.stats?.can_make_accusation || false,
         };
         
         // Only update stats if changed
         if (!stats || 
             stats.unlocked !== newStats.unlocked || 
             stats.total !== newStats.total || 
-            stats.required !== newStats.required) {
+            stats.required !== newStats.required ||
+            stats.canAccuse !== newStats.canAccuse) {
           setStats(newStats);
           
           // Notify parent component only when stats change
@@ -212,9 +221,9 @@ export const EvidenceList: React.FC<EvidenceListProps> = ({
 
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-500">
-              Required: {stats.required}
+              Required: {stats.required} ({stats.requiredUnlocked}/{stats.required} unlocked)
             </span>
-            {stats.unlocked >= stats.required && (
+            {stats.canAccuse && (
               <span className="text-green-400 font-semibold">
                 ✓ Ready to accuse
               </span>
