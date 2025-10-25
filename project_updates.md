@@ -1,6 +1,7 @@
 # Detective AI - Project Status & Updates
 
-**Last Updated:** December 20, 2024
+## Last Updated
+January 26, 2025
 
 ---
 
@@ -332,7 +333,14 @@ All integration steps completed during Phase 6:
   - Exit Game confirmation in GamePage
   - Final Accusation confirmation in AccusationPage
   - Keyboard navigation and ESC key support
-- **Step 8.6-8.7: AI Prompt Optimization** 🔄 - Next up
+- **Step 8.6: AI Prompt Optimization** ✅ - **COMPLETE - January 26**
+  - Implemented JSON-based system instruction format
+  - Created DETECTIVE_SYSTEM_INSTRUCTION JSON structure
+  - Converted buildSystemInstruction() from string template to JSON format
+  - All persona rules preserved (language matching, guardrails, knowledge boundary)
+  - Better structured, more maintainable prompt system
+  - Snyk scan: 0 security issues
+- **Step 8.7: Summary Generation Optimization** 🔄 - Next up
 
 ---
 
