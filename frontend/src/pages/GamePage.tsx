@@ -187,22 +187,23 @@ export default function GamePage() {
         </div>
         <div className="flex gap-1 sm:gap-2 shrink-0">
           {/* Mobile: Evidence button (opens modal with suspects + evidence) */}
+          {/* Hidden on tablet+ because sidebar is visible */}
           <Button 
             variant="secondary" 
             size="sm"
             onClick={() => setShowMobileEvidence(true)}
-            className="lg:hidden"
+            className="md:hidden"
             aria-label="View Evidence and Suspects"
           >
             📋
           </Button>
           
-          {/* Desktop: Full text, Mobile: Icon only */}
+          {/* How to Play - Always visible with responsive text */}
           <Button 
             variant="secondary" 
             size="sm"
             onClick={() => setShowHowToPlay(true)}
-            className="hidden sm:inline-flex lg:inline-flex"
+            className="hidden sm:inline-flex"
             aria-label="How to Play"
           >
             How to Play
@@ -211,7 +212,7 @@ export default function GamePage() {
             variant="secondary" 
             size="sm"
             onClick={() => setShowHowToPlay(true)}
-            className="sm:hidden lg:hidden w-8 h-8 p-0 flex items-center justify-center"
+            className="sm:hidden w-8 h-8 p-0 flex items-center justify-center"
             aria-label="How to Play"
           >
             ?
@@ -230,7 +231,7 @@ export default function GamePage() {
       </header>
 
       {/* Main Content - Responsive Layout */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Chat Area - Main section */}
         <main className="flex-1 flex flex-col min-h-0">
           <ChatInterface 
@@ -239,8 +240,8 @@ export default function GamePage() {
             error={error}
           />
 
-          {/* Chat Input Area - Mobile Optimized */}
-          <div className="border-t border-dark-border p-2 sm:p-4 bg-dark-surface">
+          {/* Chat Input Area - Responsive padding */}
+          <div className="border-t border-dark-border p-2 sm:p-3 md:p-4 bg-dark-surface">
             <div className="max-w-4xl mx-auto">
               <ChatInput 
                 onSendMessage={handleSendMessage}
@@ -251,9 +252,9 @@ export default function GamePage() {
           </div>
         </main>
 
-        {/* Evidence Sidebar - Desktop Only (hidden on mobile for better chat focus) */}
-        <aside className="hidden lg:block lg:w-80 border-l border-dark-border bg-dark-surface overflow-y-auto evidence-scroll">
-          <div className="p-4 space-y-6">
+        {/* Evidence Sidebar - Tablet & Desktop (hidden on mobile) */}
+        <aside className="hidden md:block md:w-64 lg:w-80 border-l border-dark-border bg-dark-surface overflow-y-auto evidence-scroll">
+          <div className="p-3 md:p-4 space-y-4 md:space-y-6">
             {/* Suspects Section */}
             {gameData?.case_id && (
               <SuspectsList caseId={gameData.case_id} />

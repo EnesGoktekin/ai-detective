@@ -62,30 +62,30 @@ export const CaseSelection: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-dark-bg p-8">
+    <div className="min-h-screen bg-dark-bg p-4 sm:p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <button
             onClick={() => navigate('/')}
-            className="text-gold-500 hover:text-gold-400 mb-4"
+            className="text-gold-500 hover:text-gold-400 mb-4 text-sm sm:text-base"
           >
             ← Back to Main Menu
           </button>
-          <h1 className="text-4xl font-bold text-gold-500 mb-2">Select a Case</h1>
-          <p className="text-gray-400">Choose a mystery to solve</p>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gold-500 mb-2">Select a Case</h1>
+          <p className="text-sm sm:text-base text-gray-400">Choose a mystery to solve</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {cases.map((caseItem) => (
             <Card
               key={caseItem.case_id}
               onClick={() => handleCaseSelect(caseItem.case_id)}
               hover
             >
-              <h3 className="text-xl font-semibold text-gold-500 mb-2">
+              <h3 className="text-lg sm:text-xl font-semibold text-gold-500 mb-2">
                 {caseItem.title}
               </h3>
-              <p className="text-gray-400">{caseItem.description}</p>
+              <p className="text-sm sm:text-base text-gray-400">{caseItem.description}</p>
             </Card>
           ))}
         </div>
