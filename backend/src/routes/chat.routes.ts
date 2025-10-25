@@ -206,6 +206,11 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
       ? detectEvidenceInMessage(trimmedMessage, evidenceWithCorrectFields, alreadyUnlocked)
       : [];
 
+    console.log('🔍 User message evidence detection:');
+    console.log('  Message:', trimmedMessage);
+    console.log('  Detected:', newlyDetectedEvidence);
+    console.log('  Already unlocked:', alreadyUnlocked.length);
+
     // Unlock newly detected evidence
     if (newlyDetectedEvidence.length > 0) {
       const evidenceToInsert = newlyDetectedEvidence.map(evidenceId => ({
@@ -261,6 +266,11 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
           [...alreadyUnlocked, ...newlyDetectedEvidence] // Don't re-unlock what we just unlocked
         )
       : [];
+
+    console.log('🤖 AI response evidence detection:');
+    console.log('  AI message:', aiResponse.substring(0, 200) + '...');
+    console.log('  Detected:', evidenceInAIResponse);
+    console.log('  Total evidence available:', evidenceWithCorrectFields.length);
 
     // Unlock evidence detected in AI response
     if (evidenceInAIResponse.length > 0) {
