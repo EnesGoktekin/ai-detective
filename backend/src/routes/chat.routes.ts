@@ -193,13 +193,27 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
       is_required_for_accusation: ev.is_required_for_accusation,
     })) || [];
 
-    // Get already unlocked evidence
-    const { data: unlockedEvidence } = await supabase
+    // Get already unlocked evidence WITH DETAILS for AI context
+    const { data: unlockedEvidenceDetails } = await supabase
       .from('evidence_unlocked')
-      .select('evidence_id')
+      .select(`
+        evidence_id,
+        evidence_lookup (
+          display_name,
+          description,
+          location
+        )
+      `)
       .eq('game_id', game_id);
 
-    const alreadyUnlocked = unlockedEvidence?.map(e => e.evidence_id) || [];
+    const alreadyUnlocked = unlockedEvidenceDetails?.map(e => e.evidence_id) || [];
+    
+    // Format unlocked evidence for AI (progressive disclosure)
+    const unlockedEvidenceForAI = (unlockedEvidenceDetails || []).map((item: any) => ({
+      name: item.evidence_lookup?.display_name || 'Unknown',
+      description: item.evidence_lookup?.description || 'No description',
+      location: item.evidence_lookup?.location || 'Unknown location',
+    }));
 
     // Detect new evidence in user message
     const newlyDetectedEvidence = evidenceWithCorrectFields.length > 0
@@ -249,6 +263,7 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
 
     const aiResponse = await generateChatResponse(
       caseContext,
+      unlockedEvidenceForAI, // Progressive evidence disclosure - only show unlocked
       aiContext.summary,
       aiContext.recentMessages,
       trimmedMessage

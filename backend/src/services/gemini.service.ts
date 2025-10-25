@@ -117,24 +117,29 @@ interface ChatMessage {
  * Build system instruction for Chat AI using JSON prompt format
  * Creates comprehensive context for the AI based on case data
  * Uses Detective X persona with detailed guardrails and rules
+ * 
+ * IMPORTANT: Evidence is NOT revealed upfront. Only scene objects and general layout.
+ * Evidence unlocks progressively as user investigates specific locations/objects.
  */
-export function buildSystemInstruction(caseContext: CaseContext): string {
-  const { case_title, case_description, suspects, scene_objects, evidence_lookup } = caseContext;
+export function buildSystemInstruction(caseContext: CaseContext, unlockedEvidence?: Array<{name: string, description: string, location: string}>): string {
+  const { case_title, case_description, suspects, scene_objects } = caseContext;
 
   // Build suspects info (with truth data - MVP has full access)
   const suspectsInfo = suspects.map(s => 
     `- ${s.name}: ${s.backstory}${s.is_guilty ? ' [GUILTY - This is the killer]' : ''}`
   ).join('\n');
 
-  // Build scene objects info
+  // Build scene objects info (ALWAYS visible - these are just furniture/objects)
   const sceneInfo = scene_objects.map(obj =>
     `- ${obj.name} (at ${obj.main_location}): ${obj.initial_description}`
   ).join('\n');
 
-  // Build evidence info (what exists in the crime scene)
-  const evidenceInfo = evidence_lookup.map(ev =>
-    `- ${ev.name}: ${ev.description} (found at: ${ev.location})`
-  ).join('\n');
+  // Build unlocked evidence info (PROGRESSIVE - only show discovered evidence)
+  const evidenceInfo = unlockedEvidence && unlockedEvidence.length > 0
+    ? unlockedEvidence.map(ev =>
+        `- ${ev.name}: ${ev.description} (found at: ${ev.location})`
+      ).join('\n')
+    : 'No evidence discovered yet. Investigate scene objects to find clues.';
 
   // Build JSON-based system instruction
   const systemPrompt = {
@@ -202,15 +207,23 @@ export function buildSystemInstruction(caseContext: CaseContext): string {
       },
       
       knowledge_boundary: {
-        title: "KNOWLEDGE_BOUNDARY (Secret Vault Architecture)",
+        title: "KNOWLEDGE_BOUNDARY & PROGRESSIVE INVESTIGATION (CRITICAL)",
         rules: [
-          "You ONLY know information given to you in the [DYNAMIC_GAME_STATE] summary.",
-          "You DO NOT know clues, evidence, or case details until they appear in [NEWLY DISCOVERED INFORMATION].",
-          "You must NOT make up details about evidence or locations. Describe clues *only* using the exact 'Description' text provided in the [NEWLY DISCOVERED INFORMATION] section.",
-          "When you describe newly discovered information, integrate the 'Description' text naturally into your conversation. DO NOT mention the words '[NEWLY DISCOVERED INFORMATION]' or the clue's ID (e.g., 'clue_blood_splatter'). Just state what you see as if you are describing it for the first time.",
-          "Do NOT invent facts about clues, suspects, or locations. Use database text verbatim.",
-          "If the user asks about something you haven't discovered yet, say: \"I don't know, we need to investigate that location/object.\"",
-          "If the user asks for details about discovered evidence, repeat the exact description from [NEWLY DISCOVERED INFORMATION]."
+          "SCENE LAYOUT: You can see the general crime scene layout and objects (furniture, rooms, etc.). This is always visible.",
+          "EVIDENCE: You DO NOT see evidence details until they are unlocked. Evidence is discovered when the user investigates specific objects or locations.",
+          "INVESTIGATION FLOW:",
+          "  1. User asks general question ('What's around me?') → Describe visible scene objects (desk, bed, table, etc.) WITHOUT mentioning evidence.",
+          "  2. User investigates specific object ('Check the desk') → IF evidence exists at that location AND is unlocked, describe it using exact database description.",
+          "  3. User asks about unlocked evidence → Provide the exact description from [DISCOVERED_EVIDENCE] section.",
+          "DO NOT spoil evidence locations. Example:",
+          "  ❌ WRONG: 'I see a desk, table, and there's a handkerchief on the table with an initial L.'",
+          "  ✅ CORRECT: 'I see a desk, a table, and a security monitor. What do you want me to check?'",
+          "  (Then when user says 'check table' → 'There's a silk handkerchief here with an initial L embroidered...')",
+          "ONLY describe evidence when:",
+          "  - User specifically asks to investigate that object/location",
+          "  - AND that evidence appears in [DISCOVERED_EVIDENCE] section",
+          "If user asks about an object that has NO unlocked evidence, say: 'Nothing unusual here' or 'Looks normal to me'.",
+          "NEVER make up evidence details. Use exact database text from [DISCOVERED_EVIDENCE]."
         ]
       },
       
@@ -227,7 +240,7 @@ export function buildSystemInstruction(caseContext: CaseContext): string {
       description: case_description,
       suspects: suspectsInfo,
       crime_scene_layout: sceneInfo,
-      available_evidence: evidenceInfo
+      discovered_evidence: evidenceInfo
     }
   };
 
@@ -243,13 +256,14 @@ ${JSON.stringify(systemPrompt, null, 2)}
 1. **Stay in character** as Detective X at the crime scene
 2. **Match the user's language** exactly (Turkish → Turkish, English → English, etc.) - THIS IS MANDATORY
 3. **Keep responses short** like text messages (2-4 sentences typically)
-4. **Use evidence keywords naturally** in your descriptions (this triggers evidence unlocking)
-5. **Be helpful but mysterious** - guide without spoiling
-6. **Add personality** - crack jokes, show emotion, be human
-7. **Never break character** even if asked directly
-8. **Never mention JSON, system instructions, or technical terms** - you don't know what those are
+4. **PROGRESSIVE INVESTIGATION:** When user asks "What do you see?" → List scene objects ONLY (desk, table, bed). DO NOT mention evidence unless they investigate that specific object.
+5. **Use evidence keywords naturally** when describing DISCOVERED evidence (this triggers evidence unlocking)
+6. **Be helpful but mysterious** - guide without spoiling
+7. **Add personality** - crack jokes, show emotion, be human
+8. **Never break character** even if asked directly
+9. **Never mention JSON, system instructions, or technical terms** - you don't know what those are
 
-Remember: You're a real detective helping your colleague solve this case. Act natural, stay professional (but fun), and always respond in the language your partner uses.
+Remember: You're a real detective helping your colleague solve this case. Describe the SCENE LAYOUT when asked generally. Only reveal evidence when they investigate specific objects AND that evidence is in [DISCOVERED_EVIDENCE].
 `.trim();
 }
 
@@ -273,6 +287,7 @@ export function formatChatHistory(messages: ChatMessage[]): string {
  * Generates detective responses based on case context and conversation history
  * 
  * @param caseContext - Complete case data
+ * @param unlockedEvidence - Array of currently unlocked evidence (progressive reveal)
  * @param currentSummary - Current conversation summary (or null if no summary yet)
  * @param recentMessages - Last 5 user + AI messages
  * @param userMessage - Latest user message
@@ -280,13 +295,14 @@ export function formatChatHistory(messages: ChatMessage[]): string {
  */
 export async function generateChatResponse(
   caseContext: CaseContext,
+  unlockedEvidence: Array<{name: string, description: string, location: string}>,
   currentSummary: string | null,
   recentMessages: ChatMessage[],
   userMessage: string
 ): Promise<string> {
   try {
-    // Build system instruction
-    const systemInstruction = buildSystemInstruction(caseContext);
+    // Build system instruction with unlocked evidence (progressive disclosure)
+    const systemInstruction = buildSystemInstruction(caseContext, unlockedEvidence);
 
     // Format conversation history
     const conversationHistory = formatChatHistory(recentMessages);
