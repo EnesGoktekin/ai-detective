@@ -309,10 +309,30 @@
 - **Improved:** GamePage layout - fixed height with proper overflow handling
 - **Status:** ✅ Complete
 
-### Phase 6.14-6.16: Polish & Optimization (NEXT)
-- Add exit game confirmation
-- Optimize performance
-- Add animations
+### ✅ Phase 7: Frontend-Backend Integration - COMPLETE
+All integration steps completed during Phase 6:
+- ✅ Step 7.1: Setup API Client (config/api.ts)
+- ✅ Step 7.2: Integrate Case Selection (CaseSelection.tsx)
+- ✅ Step 7.3: Integrate Session Management (SessionControl.tsx with localStorage)
+- ✅ Step 7.4: Integrate Chat Functionality (ChatInput, ChatInterface, GamePage)
+- ✅ Step 7.5: Integrate Evidence System (EvidenceList with polling)
+- ✅ Step 7.6: Integrate Suspects Display (SuspectsList component)
+- ✅ Step 7.7: Integrate Accusation System (AccusationPage)
+- ✅ Step 7.8: Implement State Persistence (localStorage save/resume)
+
+### 🚧 Phase 8: Game Logic & Polish - IN PROGRESS
+- **Step 8.1: Complete Game Flow** ✅ - End-to-end playthrough working
+- **Step 8.2: Loading States** ✅ - Loading component used throughout
+- **Step 8.3: Error Boundaries** ✅ - ErrorBoundary component wrapping entire app
+  - Try to recover, reload page, or go to main menu options
+  - Shows error details in development mode
+  - Graceful error handling with user-friendly messages
+- **Step 8.4: Input Cooldown** ✅ - 5-second cooldown in ChatInput
+- **Step 8.5: Confirmation Dialogs** ✅ - ConfirmationModal component created
+  - Exit Game confirmation in GamePage
+  - Final Accusation confirmation in AccusationPage
+  - Keyboard navigation and ESC key support
+- **Step 8.6-8.7: AI Prompt Optimization** 🔄 - Next up
 
 ---
 
