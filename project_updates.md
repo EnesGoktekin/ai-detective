@@ -1,10 +1,127 @@
 # Detective AI - Project Status & Updates
 
 ## Last Updated
-January 26, 2025
+October 25, 2025 (Evening - Phase 10 Testing Session)
 
 ## 🚧 Currently Working On
-Phase 10: Testing & Quality Assurance - Step 10.1 (Manual Testing - Game Flow)
+Phase 10: Testing & Quality Assurance - Step 10.1 (Manual Testing - Evidence System)
+
+---
+
+## 📊 Recent Updates (October 25, 2025)
+
+### Phase 10 Testing Session - Evidence System Debugging & Fixes
+
+#### 🐛 Critical Bugs Fixed:
+
+1. **Chat Endpoint Route Mismatch** ✅
+   - **Problem:** Frontend calling `/api/chat/{game_id}/chat`, backend expecting `/api/games/{game_id}/chat`
+   - **Solution:** Updated server.ts chat route registration from `/api/chat` to `/api/games`
+   - **Impact:** Chat messages now work correctly
+   - **Commit:** 7aa8196
+
+2. **Evidence Stats Parsing Error** ✅
+   - **Problem:** Frontend expecting `statsData.required_evidence`, backend returning `statsData.stats.required_count`
+   - **Solution:** Updated EvidenceList.tsx to parse nested `stats` object correctly
+   - **Added:** `requiredUnlocked` and `canAccuse` fields to stats state
+   - **Impact:** "Required: 3 (2/3 unlocked)" now displays correctly, "Ready to accuse" works
+   - **Commit:** e73734c
+
+3. **Evidence List Not Displaying** ✅
+   - **Problem:** Frontend expecting `evidenceData.evidence`, backend returning `evidenceData.unlocked_evidence`
+   - **Additional Issue:** Backend returns nested `evidence_lookup` object, frontend expects flat structure
+   - **Solution:** Transform backend response to frontend interface (display_name → name, etc.)
+   - **Impact:** Unlocked evidence cards now appear in sidebar
+   - **Commit:** a19eb0d
+
+4. **Progressive Evidence Discovery System** ✅
+   - **Problem:** AI was revealing all evidence locations upfront, ruining investigation mystery
+   - **Solution:** Implemented LOCKED/UNLOCKED evidence system
+     - AI sees ALL evidence with status markers
+     - [LOCKED]: Location known, details hidden ("Evidence at desk - Not yet examined")
+     - [UNLOCKED]: Full description available after user investigates
+   - **Investigation Flow:**
+     1. User: "Çevrede ne var?" → AI: Lists scene objects only (no spoilers)
+     2. User: "Masaya bak" → AI: Describes evidence using keywords → Auto-unlock
+     3. Evidence appears in sidebar with full details
+   - **Technical Implementation:**
+     - Modified `buildSystemInstruction()` to accept `unlockedEvidence` parameter
+     - Updated `knowledge_boundary` rules for progressive investigation
+     - Chat route fetches unlocked evidence WITH details
+     - Evidence formatted with [LOCKED]/[UNLOCKED] markers for AI
+   - **Impact:** Realistic detective experience, mystery preserved, natural investigation flow
+   - **Commits:** 5a37cdc, 6a4d34a
+
+#### 🧪 Testing Completed:
+
+- ✅ **Database Verification:** Turkish keywords present in all 3 evidence items
+- ✅ **Game Creation:** New game sessions create successfully
+- ✅ **Turkish Keyword Detection:** All 3 keywords work correctly
+  - "kayıt defteri demek" → Blank Security Log ✅
+  - "dantel mendil var mı" → Lace Handkerchief ✅
+  - "kırık saat buldum" → Broken Wristwatch ✅
+- ✅ **Evidence Stats:** Correct counts (Total: 3, Required: 3, Unlocked: 3, Can Accuse: YES)
+- ✅ **Evidence Display:** Unlocked evidence cards show in sidebar with details
+- ✅ **Security Scan:** Snyk SAST - 0 vulnerabilities (all commits)
+
+#### 📊 Test Script Results:
+
+Created `backend/test_full_evidence.js` - Comprehensive end-to-end test:
+```
+✅ Step 1: Database Keywords Verified (3 evidence items)
+✅ Step 2: Game Created Successfully
+✅ Step 3: Turkish Keywords Detection (3/3 unlocked)
+✅ Step 4: Evidence Stats Correct (3/3 required unlocked, 100% progress)
+✅ Step 5: Evidence Details Retrieved (3 items with descriptions)
+```
+
+#### 🎮 New Features Added:
+
+1. **Evidence Status System:**
+   - AI prompt includes evidence with LOCKED/UNLOCKED markers
+   - Progressive discovery - no spoilers at start
+   - Natural keyword-based unlocking
+   - Realistic investigation gameplay
+
+2. **Enhanced Evidence Display:**
+   - Required evidence count: "Required: 3 (2/3 unlocked)"
+   - Progress tracking with visual bar
+   - "Ready to accuse" indicator when complete
+   - Evidence cards with full details (name, description, significance)
+
+3. **Debug Logging:**
+   - Console logs for evidence detection in user messages
+   - Console logs for evidence detection in AI responses
+   - Helps verify keyword matching and unlock triggers
+
+#### 📁 Files Modified:
+
+**Backend:**
+- `backend/src/server.ts` - Fixed chat route registration
+- `backend/src/routes/chat.routes.ts` - Evidence field mapping, unlocked evidence fetching, debug logs
+- `backend/src/services/gemini.service.ts` - LOCKED/UNLOCKED evidence system, progressive investigation rules
+- `backend/database_updates/add_turkish_keywords.sql` - Turkish keywords for evidence
+- `backend/test_full_evidence.js` - Comprehensive test script (NEW)
+
+**Frontend:**
+- `frontend/src/pages/GamePage.tsx` - Fixed chat API endpoint
+- `frontend/src/config/api.ts` - Updated chat endpoint documentation
+- `frontend/src/components/EvidenceList.tsx` - Stats parsing fix, evidence response transformation
+
+#### 🔐 Security:
+
+- All commits scanned with Snyk Code SAST
+- 0 vulnerabilities found across all changes
+- Feedback sent to Snyk: 4 issues fixed, 2 prevented
+
+#### ⏭️ Next Steps:
+
+1. Complete frontend testing (browser refresh and test new game)
+2. Test complete investigation flow (general → specific → unlock)
+3. Verify AI doesn't spoil evidence locations
+4. Test Turkish language chat interactions
+5. Continue Phase 10.1 manual testing checklist
+6. Move to Phase 10.2: Edge Cases Testing
 
 ---
 
