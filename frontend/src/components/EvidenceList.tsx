@@ -1,0 +1,246 @@
+import React, { useState } from 'react';
+import { Card } from './Card';
+import { Modal } from './Modal';
+import { buildApiUrl } from '@/config/api';
+
+interface Evidence {
+  evidence_id: string;
+  name: string;
+  description: string;
+  significance: string;
+  object_name?: string;
+  unlocked_at: string;
+}
+
+interface EvidenceItemProps {
+  evidence: Evidence;
+}
+
+const EvidenceItem: React.FC<EvidenceItemProps> = ({ evidence }) => {
+  const [showDetails, setShowDetails] = useState(false);
+
+  return (
+    <>
+      <Card 
+        onClick={() => setShowDetails(true)}
+        className="mb-3 cursor-pointer hover:border-gold-500 transition-colors"
+      >
+        <div className="flex items-start gap-3">
+          <div className="text-2xl">🔍</div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-semibold text-gold-500 mb-1 truncate">
+              {evidence.name}
+            </h3>
+            {evidence.object_name && (
+              <p className="text-xs text-gray-400 mb-1">
+                Found in: {evidence.object_name}
+              </p>
+            )}
+            <p className="text-xs text-gray-500 line-clamp-2">
+              {evidence.description}
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Evidence Details Modal */}
+      <Modal
+        isOpen={showDetails}
+        onClose={() => setShowDetails(false)}
+        title={evidence.name}
+        size="md"
+      >
+        <div className="space-y-4">
+          {evidence.object_name && (
+            <div>
+              <h4 className="text-xs font-semibold text-gold-500 uppercase mb-1">
+                Location
+              </h4>
+              <p className="text-sm text-gray-300">{evidence.object_name}</p>
+            </div>
+          )}
+
+          <div>
+            <h4 className="text-xs font-semibold text-gold-500 uppercase mb-1">
+              Description
+            </h4>
+            <p className="text-sm text-gray-300 leading-relaxed">
+              {evidence.description}
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-semibold text-gold-500 uppercase mb-1">
+              Significance
+            </h4>
+            <p className="text-sm text-gray-300 leading-relaxed">
+              {evidence.significance}
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-semibold text-gold-500 uppercase mb-1">
+              Discovered
+            </h4>
+            <p className="text-sm text-gray-400">
+              {new Date(evidence.unlocked_at).toLocaleString()}
+            </p>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+};
+
+interface EvidenceListProps {
+  gameId: string;
+  onEvidenceUpdate?: (unlockedCount: number, totalCount: number) => void;
+}
+
+export const EvidenceList: React.FC<EvidenceListProps> = ({ 
+  gameId,
+  onEvidenceUpdate 
+}) => {
+  const [evidence, setEvidence] = useState<Evidence[]>([]);
+  const [stats, setStats] = useState<{ unlocked: number; total: number; required: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  React.useEffect(() => {
+    const fetchEvidence = async () => {
+      try {
+        setError(null);
+
+        // Fetch unlocked evidence
+        const evidenceResponse = await fetch(buildApiUrl(`/api/evidence/game/${gameId}/unlocked`));
+        if (!evidenceResponse.ok) {
+          throw new Error('Failed to fetch evidence');
+        }
+        const evidenceData = await evidenceResponse.json();
+        const newEvidence = evidenceData.evidence || [];
+        
+        // Only update if evidence count changed
+        if (newEvidence.length !== evidence.length) {
+          setEvidence(newEvidence);
+        }
+
+        // Fetch evidence stats
+        const statsResponse = await fetch(buildApiUrl(`/api/evidence/game/${gameId}/stats`));
+        if (!statsResponse.ok) {
+          throw new Error('Failed to fetch stats');
+        }
+        const statsData = await statsResponse.json();
+        const newStats = {
+          unlocked: statsData.unlocked_count || 0,
+          total: statsData.total_evidence || 0,
+          required: statsData.required_evidence || 0,
+        };
+        
+        // Only update stats if changed
+        if (!stats || 
+            stats.unlocked !== newStats.unlocked || 
+            stats.total !== newStats.total || 
+            stats.required !== newStats.required) {
+          setStats(newStats);
+          
+          // Notify parent component only when stats change
+          if (onEvidenceUpdate) {
+            onEvidenceUpdate(newStats.unlocked, newStats.required);
+          }
+        }
+        
+        // Mark initial load as complete
+        if (isInitialLoad) {
+          setIsInitialLoad(false);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load evidence');
+        if (isInitialLoad) {
+          setIsInitialLoad(false);
+        }
+      }
+    };
+
+    fetchEvidence();
+
+    // Poll for updates every 5 seconds (increased from 3)
+    const interval = setInterval(fetchEvidence, 5000);
+    return () => clearInterval(interval);
+  }, [gameId]);
+
+  // Show loading only on very first load
+  if (isInitialLoad && !stats) {
+    return (
+      <Card className="text-center py-8">
+        <div className="animate-pulse">
+          <div className="text-gold-500 text-2xl mb-2">🔍</div>
+          <p className="text-gray-400 text-sm">Loading evidence...</p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="text-center py-8 border-red-500/30 bg-red-500/5">
+        <p className="text-red-400 text-sm">{error}</p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Progress Stats */}
+      {stats && (
+        <div className="bg-dark-elevated border border-dark-border rounded-lg p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-gray-400 uppercase">
+              Progress
+            </span>
+            <span className="text-xs text-gold-500 font-semibold">
+              {stats.unlocked} / {stats.total}
+            </span>
+          </div>
+          
+          {/* Progress bar */}
+          <div className="w-full bg-dark-bg rounded-full h-2 mb-2">
+            <div
+              className="bg-gold-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${stats.total > 0 ? (stats.unlocked / stats.total) * 100 : 0}%` }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-500">
+              Required: {stats.required}
+            </span>
+            {stats.unlocked >= stats.required && (
+              <span className="text-green-400 font-semibold">
+                ✓ Ready to accuse
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Evidence List */}
+      {evidence.length === 0 ? (
+        <Card className="text-center py-8">
+          <div className="text-gray-500 text-3xl mb-3">🔒</div>
+          <p className="text-gray-400 text-sm mb-1">
+            No evidence collected yet
+          </p>
+          <p className="text-gray-500 text-xs">
+            Ask questions to unlock clues
+          </p>
+        </Card>
+      ) : (
+        <div className="space-y-0">
+          {evidence.map((item) => (
+            <EvidenceItem key={item.evidence_id} evidence={item} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};

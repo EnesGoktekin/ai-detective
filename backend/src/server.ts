@@ -3,6 +3,14 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { testDatabaseConnection, getDatabaseInfo } from './utils/database';
 import { testGeminiConnection, generateResponse } from './services/gemini.service';
+import casesRouter from './routes/cases.routes';
+import gameRouter from './routes/game.routes';
+import chatRouter from './routes/chat.routes';
+import evidenceRouter from './routes/evidence.routes';
+import accusationRouter from './routes/accusation.routes';
+import messagesRouter from './routes/messages.routes';
+import { sanitizeBody } from './middleware/validation.middleware';
+import { notFoundHandler, errorHandler } from './middleware/error.middleware';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -27,6 +35,17 @@ app.use(express.json());
 
 // Middleware: Parse URL-encoded request bodies
 app.use(express.urlencoded({ extended: true }));
+
+// Middleware: Sanitize request bodies (prevent XSS)
+app.use(sanitizeBody);
+
+// API Routes
+app.use('/api/cases', casesRouter);
+app.use('/api/games', gameRouter);
+app.use('/api/chat', chatRouter);
+app.use('/api/evidence', evidenceRouter);
+app.use('/api/accusation', accusationRouter);
+app.use('/api/messages', messagesRouter);
 
 // Test endpoint - Simple health check
 app.get('/api/health', (_req: Request, res: Response) => {
@@ -114,13 +133,11 @@ app.post('/api/ai/prompt', async (req: Request, res: Response) => {
   }
 });
 
-// 404 handler - Endpoint not found
-app.use((req: Request, res: Response) => {
-  res.status(404).json({
-    status: 'error',
-    message: `Endpoint not found: ${req.method} ${req.path}`,
-  });
-});
+// 404 Handler - Must be after all routes
+app.use(notFoundHandler);
+
+// Global Error Handler - Must be last
+app.use(errorHandler);
 
 // Start server and listen on specified port
 const server = app.listen(PORT, () => {
@@ -128,20 +145,41 @@ const server = app.listen(PORT, () => {
   console.info(`📍 Health check: http://localhost:${PORT}/api/health`);
   console.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   
-  // Test database connection (async, non-blocking)
+  // Log database info
   const dbInfo = getDatabaseInfo();
   console.info(`🗄️  Database: ${dbInfo.url}`);
-  testDatabaseConnection().catch(console.error);
+});
+
+// Test connections after server starts (non-blocking, no await)
+setImmediate(() => {
+  testDatabaseConnection()
+    .then(connected => {
+      if (connected) console.info('✅ Database connection verified!');
+    })
+    .catch(err => console.error('❌ Database test error:', err.message));
   
-  // Test Gemini AI connection (async, non-blocking)
-  console.info('🤖 Testing Gemini AI connection...');
-  testGeminiConnection().then((aiConnected) => {
-    if (aiConnected) {
-      console.info('✅ Gemini AI connection successful!');
-    } else {
-      console.error('❌ Gemini AI connection failed!');
-    }
-  }).catch(console.error);
+  testGeminiConnection()
+    .then(connected => {
+      if (connected) console.info('✅ Gemini AI connection successful!');
+    })
+    .catch(err => console.error('❌ AI test error:', err.message));
+});
+
+// Graceful shutdown handlers
+process.on('SIGTERM', () => {
+  console.info('SIGTERM received, closing server gracefully...');
+  server.close(() => {
+    console.info('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.info('\nSIGINT received, closing server gracefully...');
+  server.close(() => {
+    console.info('Server closed');
+    process.exit(0);
+  });
 });
 
 // Export app for testing purposes

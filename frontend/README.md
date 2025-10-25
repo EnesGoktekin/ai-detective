@@ -1,73 +1,119 @@
-# React + TypeScript + Vite
+# Detective AI - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+AI-powered detective game frontend built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+## 🚀 Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Framework:** React 18
+- **Build Tool:** Vite
+- **Language:** TypeScript
+- **Routing:** React Router v7
+- **State Management:** Zustand
+- **Styling:** Tailwind CSS v3
+- **Theme:** Dark theme with gold accents
 
-## React Compiler
+## 📁 Project Structure
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+frontend/
+├── src/
+│   ├── components/     # Reusable UI components
+│   ├── pages/          # Page components
+│   ├── types/          # TypeScript type definitions
+│   ├── utils/          # Utility functions
+│   ├── store/          # Zustand store
+│   ├── services/       # API services
+│   ├── hooks/          # Custom React hooks
+│   ├── assets/         # Static assets
+│   ├── App.tsx         # Main app component
+│   ├── main.tsx        # Entry point
+│   └── index.css       # Global styles
+├── public/             # Public assets
+└── index.html          # HTML template
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🛠️ Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Install dependencies
+npm install
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
 ```
+
+## 🌐 Environment Variables
+
+Create a `.env` file based on `.env.example`:
+
+```
+VITE_API_URL=http://localhost:3000
+```
+
+## 🎨 Design System
+
+- **Primary Color:** Gold (#FFD700)
+- **Background:** Dark (#0a0a0a)
+- **Surface:** Darker (#1a1a1a)
+- **Typography:** Inter, system-ui
+
+## 📝 Features Implemented
+
+### ✅ Foundation (Phase 6.0)
+- Vite + React + TypeScript setup
+- React Router v7 configured
+- Zustand state management
+- Tailwind CSS with dark theme
+- Path aliases (@/ prefix)
+- Development server with HMR
+- TypeScript strict mode
+- API proxy to backend
+
+### ✅ Design System & Theme (Phase 6.1)
+- Complete design tokens in `src/utils/theme.ts`
+- Colors: Dark backgrounds + 10-shade gold palette
+- Typography: Inter font, 10 sizes, 4 weights
+- Spacing, shadows, border radius, breakpoints
+- Tailwind CSS extended with custom theme
+
+### ✅ UI Component Library (Phase 6.2)
+- **Button**: Primary/Secondary/Ghost variants, loading states, 3 sizes
+- **Input**: Dark themed, validation errors, labels, full-width
+- **Card**: Hoverable containers, customizable padding
+- **Modal**: Accessible dialogs, ESC key support, backdrop
+- **Loading**: Gold spinner, 3 sizes, optional text
+- **Typography**: Heading (h1-h6) and Text components with variants
+- **Component Showcase**: Visual testing page at `/showcase`
+
+## 🔗 Backend Integration
+
+The frontend is configured to proxy API requests to the backend running on `http://localhost:3000`.
+
+## 📱 Responsive Design
+
+The app is designed to work seamlessly on:
+- Desktop (1920px+)
+- Tablet (768px - 1919px)
+- Mobile (320px - 767px)
+
+## 🚧 Coming Next
+
+Phase 6 Frontend Implementation:
+- Design system & theme
+- Reusable UI components
+- Main menu page
+- Case selection
+- Game page with chat interface
+- Evidence display
+- Accusation system
+
+---
+
+**Status:** Foundation complete ✅  
+**Ready for:** Phase 6 UI implementation

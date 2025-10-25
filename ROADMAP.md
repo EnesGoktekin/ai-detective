@@ -174,45 +174,91 @@
 
 ## 📝 Phase 3: Game Content Creation
 
-### Step 3.1: Design Case 1 Content
-- **Goal:** Create complete first case
+### Step 3.1: Design Case 1 - Story & Suspects
+- **Goal:** Create complete first case narrative and characters
 - **Tasks:**
-  - Write case story and background
-  - Create 3-5 suspects with detailed profiles
-  - Design 5-8 evidence items with unlock keywords
-  - Define the solution
-  - Write AI system prompt for this case
-- **Test:** Review for logical consistency
-- **Deliverable:** Case 1 content document
+  - Write case title and description
+  - Create detailed case story/background
+  - Design 3-5 suspects with:
+    - Names
+    - Detailed backstories (for AI knowledge)
+    - Identify the guilty suspect (is_guilty flag)
+  - Write initial AI system prompt and scene description
+  - Create suspects_list JSONB for frontend UI
+- **Test:** Review for logical consistency and narrative quality
+- **Deliverable:** Case 1 narrative document (Markdown or JSON)
 
-### Step 3.2: Insert Case 1 into Database
-- **Goal:** Populate database with Case 1
+### Step 3.2: Design Case 1 - Crime Scene & Objects
+- **Goal:** Define interactive crime scene environment
 - **Tasks:**
-  - Insert case record
-  - Insert all suspects
-  - Insert all evidence with keywords
-  - Verify relationships
-- **Test:** Query all Case 1 data successfully
-- **Deliverable:** Case 1 in database
+  - Identify main locations in the crime scene
+  - Create 5-10 scene objects (items, locations, areas)
+  - For each object define:
+    - Name and main_location
+    - Initial description (what AI describes before investigation)
+  - Map out how objects relate to the crime
+- **Test:** Review scene for completeness and investigative potential
+- **Deliverable:** Scene objects document for Case 1
 
-### Step 3.3: Design Cases 2-5 Content (Simplified)
-- **Goal:** Create remaining cases at basic level
+### Step 3.3: Design Case 1 - Evidence System
+- **Goal:** Create evidence items with discovery mechanics
 - **Tasks:**
-  - Outline stories for cases 2-5
-  - Create basic suspect profiles
-  - Define basic evidence items
-  - Note: Can be enhanced later
-- **Test:** Review for completeness
-- **Deliverable:** Cases 2-5 basic content
+  - Design 5-8 evidence items
+  - For each evidence define:
+    - Display name and description
+    - Link to scene_object (which object contains it)
+    - Unlock keywords (array of trigger words/phrases)
+    - Mark if required for accusation (is_required_for_accusation)
+  - Ensure at least 3-4 evidence items are required for win
+  - Define logical discovery progression
+- **Test:** Review unlock keywords for variety and discoverability
+- **Deliverable:** Evidence design document for Case 1
 
-### Step 3.4: Insert Cases 2-5 into Database
-- **Goal:** Populate database with all cases
+### Step 3.4: Insert Case 1 into Database
+- **Goal:** Populate Supabase with complete Case 1 data
 - **Tasks:**
-  - Insert all case records
+  - Insert case record (with initial_prompt_data JSONB and suspects_list JSONB)
+  - Insert all suspects (with backstory and is_guilty flag)
+  - Insert all scene_objects
+  - Insert all evidence_lookup records (with object_id links and unlock_keywords arrays)
+  - Verify all foreign key relationships
+- **Test:** Query all Case 1 data using Supabase SQL editor
+- **Deliverable:** Case 1 fully loaded in database
+
+### Step 3.5: Test Case 1 Data Retrieval
+- **Goal:** Verify backend can access Case 1 data
+- **Tasks:**
+  - Create backend endpoint GET /api/cases/:case_id
+  - Query and return case with all related data
+  - Test JSONB field parsing (initial_prompt_data, suspects_list)
+  - Test array field handling (unlock_keywords)
+  - Verify foreign key joins work correctly
+- **Test:** Successfully retrieve complete Case 1 via API
+- **Deliverable:** Working case data endpoint
+
+### Step 3.6: Design Cases 2-5 Content (Simplified for MVP)
+- **Goal:** Create remaining cases at functional level
+- **Tasks:**
+  - For each case (2-5):
+    - Write basic story outline
+    - Create 3-4 suspects with backstories
+    - Define 4-6 evidence items
+    - Create 3-5 scene objects
+    - Write basic initial prompt
+  - Note: Can be enhanced post-MVP
+- **Test:** Review each case for playability
+- **Deliverable:** Cases 2-5 content documents
+
+### Step 3.7: Insert Cases 2-5 into Database
+- **Goal:** Populate database with all remaining cases
+- **Tasks:**
+  - Insert all case records (with JSONB fields)
   - Insert suspects for each case
-  - Insert evidence for each case
-- **Test:** Query all cases successfully
-- **Deliverable:** All 5 cases in database
+  - Insert scene_objects for each case
+  - Insert evidence_lookup for each case
+  - Verify data integrity across all cases
+- **Test:** Query all 5 cases successfully
+- **Deliverable:** Complete game content in database
 
 ---
 

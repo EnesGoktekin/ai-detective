@@ -40,16 +40,21 @@ An **AI-powered** detective game where players investigate crime cases through *
 -----
 **5. Technical Architecture**
 
-- **Database:** Supabase
-- **Backend:** NodeJS
-- **Frontend:** React, Vite, TypeScript
+- **Database:** Supabase (PostgreSQL)
+  - 7 tables: cases, suspects, scene_objects, evidence_lookup, games, messages, evidence_unlocked
+  - Full schema documented in DATABASE_SCHEMA.md
+- **Backend:** Node.js (v24.2.0) + Express v5 + TypeScript
+  - Port: 3000
+  - Development: ts-node + nodemon
+  - API Routes: /api/cases, /api/health, /api/database/test, /api/ai/test
+- **Frontend:** React + Vite + TypeScript
 - **AI:** Gemini 2.5 Flash
-- **Deployment:** Vercel
+- **Deployment:** Vercel (planned)
 -----
 **6. AI Logic**
 
 1. **Chat AI:** The main, **interactive** AI for the game. **It converses** with the user and **retrieves** information from the database.
-1. **Summarizing AI:** This AI will summarize the chat history **after** every **10** user messages. **This approach ensures** the Chat AI **does not have to process the** entire chat history.
+2. **Summarizing AI:** This AI will summarize the chat history **after** every **10** user messages. **This approach ensures** the Chat AI **does not have to process the** entire chat history.
 -----
 **7. Future Roadmap**
 
