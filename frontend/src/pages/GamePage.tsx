@@ -242,7 +242,7 @@ export default function GamePage() {
 
           {/* Chat Input Area - Responsive padding */}
           <div className="border-t border-dark-border p-2 sm:p-3 md:p-4 bg-dark-surface">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-5xl mx-auto">
               <ChatInput 
                 onSendMessage={handleSendMessage}
                 disabled={!gameData || gameData.status === 'completed'}
@@ -253,8 +253,8 @@ export default function GamePage() {
         </main>
 
         {/* Evidence Sidebar - Tablet & Desktop (hidden on mobile) */}
-        <aside className="hidden md:block md:w-64 lg:w-80 border-l border-dark-border bg-dark-surface overflow-y-auto evidence-scroll">
-          <div className="p-3 md:p-4 space-y-4 md:space-y-6">
+        <aside className="hidden md:block md:w-64 lg:w-80 xl:w-96 border-l border-dark-border bg-dark-surface overflow-y-auto evidence-scroll">
+          <div className="p-3 md:p-4 lg:p-5 space-y-4 md:space-y-6">
             {/* Suspects Section */}
             {gameData?.case_id && (
               <SuspectsList caseId={gameData.case_id} />

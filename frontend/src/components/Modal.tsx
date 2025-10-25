@@ -42,11 +42,12 @@ export const Modal: React.FC<ModalProps> = ({
   };
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby={title ? 'modal-title' : undefined}>
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
+        aria-hidden="true"
       />
       
       {/* Modal */}
@@ -61,10 +62,10 @@ export const Modal: React.FC<ModalProps> = ({
         {/* Header */}
         {title && (
           <div className="flex items-center justify-between p-6 border-b-2 border-dark-border">
-            <h2 className="text-2xl font-bold text-gold-500">{title}</h2>
+            <h2 id="modal-title" className="text-2xl font-bold text-gold-500">{title}</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gold-500 transition-colors"
+              className="text-gray-400 hover:text-gold-500 transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 rounded"
               aria-label="Close modal"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

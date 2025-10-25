@@ -36,11 +36,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     <div 
       ref={containerRef}
       className="flex-1 overflow-y-auto p-4 scroll-smooth chat-scroll"
+      role="log"
+      aria-live="polite"
+      aria-label="Chat conversation"
     >
       <div className="max-w-4xl mx-auto">
         {/* Error state */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-4">
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-4" role="alert">
             <p className="text-red-400 text-sm">{error}</p>
           </div>
         )}
