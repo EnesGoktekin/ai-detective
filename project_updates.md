@@ -1,6 +1,6 @@
 # Detective AI - Project Status & Updates
 
-**Last Updated:** October 24, 2025
+**Last Updated:** October 25, 2025
 
 ---
 
@@ -49,9 +49,18 @@
   - Snyk security scan: 0 issues
   - Turkish detective responses tested successfully
   - 3 issues encountered and resolved (see ERROR_LOG.md)
+- **Phase 2: Database Schema** ✅
+  - Complete database schema designed (Static + Dynamic separation)
+  - All 7 tables created in Supabase
+  - Static tables: cases, suspects, scene_objects, evidence_lookup
+  - Dynamic tables: games, messages, evidence_unlocked
+  - All constraints, indexes, and foreign keys configured
+  - TypeScript type definitions added to backend
+  - DATABASE_SCHEMA.md documentation created
+  - Schema supports AI context management, evidence unlocking, and accusation validation
 
 ### 🚧 Partially Built
-- **Nothing yet** - Moving to Step 2.1
+- **Nothing yet** - Moving to game content creation or AI implementation
 
 ### ❌ Missing / Not Started
 
@@ -61,15 +70,15 @@
 - [x] Step 1.3: Supabase database connection
 - [x] Step 1.4: Gemini AI integration
 
-#### Phase 2: Database Schema (Next)
-- [ ] Step 2.1: Create Cases table (Static)
-- [ ] Step 2.2: Create Suspects table (Static)
-- [ ] Step 2.3: Create Scene Objects table (Static)
-- [ ] Step 2.4: Create Evidence Lookup table (Static)
-- [ ] Step 2.5: Create Games table (Dynamic)
-- [ ] Step 2.6: Create Messages table (Dynamic)
-- [ ] Step 2.7: Create Evidence Unlocked table (Dynamic)
-- [ ] Step 2.8: Add TypeScript type definitions
+#### Phase 2: Database Schema ✅
+- [x] Step 2.1: Create Cases table (Static)
+- [x] Step 2.2: Create Suspects table (Static)
+- [x] Step 2.3: Create Scene Objects table (Static)
+- [x] Step 2.4: Create Evidence Lookup table (Static)
+- [x] Step 2.5: Create Games table (Dynamic)
+- [x] Step 2.6: Create Messages table (Dynamic)
+- [x] Step 2.7: Create Evidence Unlocked table (Dynamic)
+- [x] Step 2.8: Add TypeScript type definitions
 
 ### ❌ Missing / Not Started
 
@@ -103,17 +112,18 @@
 - [ ] Error handling and logging
 
 #### Database (Supabase)
-- [ ] Database schema design (completed by user)
-- [ ] Static Tables creation:
+- [x] Database schema design (completed by user)
+- [x] Static Tables creation:
   - Cases table (with initial_prompt_data, suspects_list)
   - Suspects table (with backstory, is_guilty)
   - Scene Objects table (with main_location, initial_description)
   - Evidence Lookup table (with object_id, unlock_keywords, is_required_for_accusation)
-- [ ] Dynamic Tables creation:
-  - Games table (with current_summary, message_count)
-  - Messages table (with sequence_number)
+- [x] Dynamic Tables creation:
+  - Games table (with current_summary, message_count, final_outcome)
+  - Messages table (with sequence_number, sender check constraint)
   - Evidence Unlocked table
-- [ ] Database relationships setup
+- [x] Database relationships setup (CASCADE and RESTRICT constraints)
+- [x] Indexes created (game_id, sequence_number, last_updated, etc.)
 - [ ] RLS (Row Level Security) policies
 - [ ] Database migrations
 
