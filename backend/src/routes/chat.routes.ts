@@ -185,6 +185,14 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
       console.error('Error fetching evidence:', evidenceError);
     }
 
+    // Map database field 'display_name' to expected 'name' field
+    const evidenceWithCorrectFields = caseEvidence?.map(ev => ({
+      evidence_id: ev.evidence_id,
+      name: ev.display_name, // Map display_name to name
+      unlock_keywords: ev.unlock_keywords,
+      is_required_for_accusation: ev.is_required_for_accusation,
+    })) || [];
+
     // Get already unlocked evidence
     const { data: unlockedEvidence } = await supabase
       .from('evidence_unlocked')
@@ -194,8 +202,8 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
     const alreadyUnlocked = unlockedEvidence?.map(e => e.evidence_id) || [];
 
     // Detect new evidence in user message
-    const newlyDetectedEvidence = caseEvidence
-      ? detectEvidenceInMessage(trimmedMessage, caseEvidence, alreadyUnlocked)
+    const newlyDetectedEvidence = evidenceWithCorrectFields.length > 0
+      ? detectEvidenceInMessage(trimmedMessage, evidenceWithCorrectFields, alreadyUnlocked)
       : [];
 
     // Unlock newly detected evidence
@@ -246,10 +254,10 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
     // ============================================
 
     // Check AI response for evidence keywords too
-    const evidenceInAIResponse = caseEvidence
+    const evidenceInAIResponse = evidenceWithCorrectFields.length > 0
       ? detectEvidenceInMessage(
           aiResponse, 
-          caseEvidence, 
+          evidenceWithCorrectFields, 
           [...alreadyUnlocked, ...newlyDetectedEvidence] // Don't re-unlock what we just unlocked
         )
       : [];
