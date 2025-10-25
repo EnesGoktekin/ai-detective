@@ -123,7 +123,15 @@ export const EvidenceList: React.FC<EvidenceListProps> = ({
           throw new Error('Failed to fetch evidence');
         }
         const evidenceData = await evidenceResponse.json();
-        const newEvidence = evidenceData.evidence || [];
+        
+        // Transform backend response to match frontend interface
+        const newEvidence = (evidenceData.unlocked_evidence || []).map((item: any) => ({
+          evidence_id: item.evidence_id,
+          name: item.evidence_lookup?.display_name || 'Unknown Evidence',
+          description: item.evidence_lookup?.description || 'No description available',
+          significance: item.evidence_lookup?.is_required_for_accusation ? 'Required for accusation' : 'Optional',
+          unlocked_at: item.unlocked_at,
+        }));
         
         // Only update if evidence count changed
         if (newEvidence.length !== evidence.length) {
