@@ -5,6 +5,7 @@ import { Card } from '../components/Card';
 import { Loading } from '../components/Loading';
 import { HowToPlayModal } from '../components/HowToPlayModal';
 import { ConfirmationModal } from '../components/ConfirmationModal';
+import { MobileEvidenceSheet } from '../components/MobileEvidenceSheet';
 import { ChatInterface } from '../components/ChatInterface';
 import { ChatInput } from '../components/ChatInput';
 import { EvidenceList } from '../components/EvidenceList';
@@ -38,6 +39,7 @@ export default function GamePage() {
   const [error, setError] = useState<string | null>(null);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showMobileEvidence, setShowMobileEvidence] = useState(false);
   const [canAccuse, setCanAccuse] = useState(false);
 
   useEffect(() => {
@@ -184,12 +186,23 @@ export default function GamePage() {
           </div>
         </div>
         <div className="flex gap-1 sm:gap-2 shrink-0">
+          {/* Mobile: Evidence button (opens modal with suspects + evidence) */}
+          <Button 
+            variant="secondary" 
+            size="sm"
+            onClick={() => setShowMobileEvidence(true)}
+            className="lg:hidden"
+            aria-label="View Evidence and Suspects"
+          >
+            📋
+          </Button>
+          
           {/* Desktop: Full text, Mobile: Icon only */}
           <Button 
             variant="secondary" 
             size="sm"
             onClick={() => setShowHowToPlay(true)}
-            className="hidden sm:inline-flex"
+            className="hidden sm:inline-flex lg:inline-flex"
             aria-label="How to Play"
           >
             How to Play
@@ -198,7 +211,7 @@ export default function GamePage() {
             variant="secondary" 
             size="sm"
             onClick={() => setShowHowToPlay(true)}
-            className="sm:hidden w-8 h-8 p-0 flex items-center justify-center"
+            className="sm:hidden lg:hidden w-8 h-8 p-0 flex items-center justify-center"
             aria-label="How to Play"
           >
             ?
@@ -264,6 +277,15 @@ export default function GamePage() {
       <HowToPlayModal 
         isOpen={showHowToPlay} 
         onClose={() => setShowHowToPlay(false)} 
+      />
+
+      {/* Mobile Evidence Sheet - Only visible on mobile/tablet */}
+      <MobileEvidenceSheet
+        isOpen={showMobileEvidence}
+        onClose={() => setShowMobileEvidence(false)}
+        caseId={gameData?.case_id}
+        gameId={gameId}
+        onEvidenceUpdate={handleEvidenceUpdate}
       />
 
       {/* Exit Game Confirmation */}

@@ -13,3 +13,4 @@ export { EvidenceList } from './EvidenceList';
 export { SuspectsList } from './SuspectsList';
 export { ErrorBoundary } from './ErrorBoundary';
 export { ConfirmationModal } from './ConfirmationModal';
+export { MobileEvidenceSheet } from './MobileEvidenceSheet';
