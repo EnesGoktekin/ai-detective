@@ -341,30 +341,59 @@ export async function generateConversationSummary(
     // Format messages for summarization
     const messagesToSummarize = formatChatHistory(recentMessages);
 
-    // Build summarization prompt
-    const summaryPrompt = `
-# CONVERSATION SUMMARIZER
+    // Build optimized JSON-based summarization prompt
+    const summaryPrompt = {
+      role: "CONVERSATION SUMMARIZER for Detective Investigation Game",
+      task: "Create a structured summary of the detective conversation",
+      
+      output_format: {
+        structure: "Single coherent paragraph (4-6 sentences)",
+        language: "Match the language used in the conversation (Turkish/English/etc)",
+        style: "Professional detective case notes style"
+      },
+      
+      focus_areas: [
+        "Investigation actions taken (locations searched, objects examined)",
+        "Evidence discovered or discussed",
+        "Suspects mentioned or questioned",
+        "Key theories or deductions made",
+        "Current investigation direction or next steps"
+      ],
+      
+      critical_rules: [
+        "DO NOT repeat information from previous summary - only add NEW information",
+        "Focus on FACTS and ACTIONS, not small talk",
+        "Use past tense (e.g., 'The detective examined...', 'They discussed...')",
+        "Keep it concise but informative",
+        "If nothing significant happened, say so briefly"
+      ],
+      
+      context: {
+        previous_summary: previousSummary || "No previous summary - this is the start of the investigation.",
+        recent_conversation: messagesToSummarize
+      }
+    };
 
-You are a summarization AI for a detective game. Your job is to create a concise summary of the conversation between the player and their detective colleague.
+    const promptText = `
+# DETECTIVE CASE SUMMARY GENERATOR
 
-## Instructions:
-1. Create a brief summary (3-5 sentences) of what has been discussed
-2. Focus on: key questions asked, locations examined, suspects discussed, evidence mentioned
-3. Keep it factual and objective
-4. If there's a previous summary, build upon it (don't repeat everything)
-
-${previousSummary ? `## Previous Summary:\n${previousSummary}\n` : '## This is the first summary (no previous summary exists)'}
-
-## Recent Conversation to Summarize:
-${messagesToSummarize}
+${JSON.stringify(summaryPrompt, null, 2)}
 
 ---
 
-**Your summary (concise, 3-5 sentences):**
+## YOUR TASK:
+Based on the conversation above, write a concise summary paragraph (4-6 sentences) that:
+1. **Builds upon** the previous summary (don't repeat it, just add new info)
+2. **Focuses on** investigation progress (what was searched, what was found, what was discussed)
+3. **Captures** key developments and current direction
+4. **Matches** the language used in the conversation
+5. **Uses** professional detective case notes style
+
+**Write your summary now (one paragraph, 4-6 sentences):**
 `.trim();
 
     // Generate summary
-    const summary = await generateResponse(summaryPrompt);
+    const summary = await generateResponse(promptText);
 
     return summary.trim();
   } catch (error) {
