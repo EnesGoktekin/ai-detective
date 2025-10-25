@@ -26,9 +26,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
+  // Only scroll the chat container, not the entire page
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current && containerRef.current) {
+      // Scroll within the container only
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'end',
+        inline: 'nearest'
+      });
     }
   }, [messages]);
 

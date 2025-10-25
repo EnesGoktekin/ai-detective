@@ -58,7 +58,7 @@ export const SuspectsList: React.FC<SuspectsListProps> = ({ caseId }) => {
     <>
       <div className="mb-4">
         <h2 className="text-xl font-bold text-gold-500 mb-3">Suspects</h2>
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-64 overflow-y-auto evidence-scroll pr-1">
           {suspects.map((suspect) => (
             <Card
               key={suspect.suspect_id}

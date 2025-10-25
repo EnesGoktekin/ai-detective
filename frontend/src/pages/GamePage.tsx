@@ -253,7 +253,7 @@ export default function GamePage() {
         </main>
 
         {/* Evidence Sidebar - Tablet & Desktop (hidden on mobile) */}
-        <aside className="hidden md:block md:w-64 lg:w-80 xl:w-96 border-l border-dark-border bg-dark-surface overflow-y-auto evidence-scroll">
+        <aside className="hidden md:block md:w-64 lg:w-80 xl:w-96 border-l border-dark-border bg-dark-surface">
           <div className="p-3 md:p-4 lg:p-5 space-y-4 md:space-y-6">
             {/* Suspects Section */}
             {gameData?.case_id && (

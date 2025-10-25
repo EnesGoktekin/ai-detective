@@ -235,7 +235,7 @@ export const EvidenceList: React.FC<EvidenceListProps> = ({
           </p>
         </Card>
       ) : (
-        <div className="space-y-0">
+        <div className="space-y-0 max-h-96 overflow-y-auto evidence-scroll pr-1">
           {evidence.map((item) => (
             <EvidenceItem key={item.evidence_id} evidence={item} />
           ))}
