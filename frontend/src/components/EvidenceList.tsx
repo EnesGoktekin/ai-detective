@@ -207,39 +207,6 @@ export const EvidenceList: React.FC<EvidenceListProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Progress Stats */}
-      {stats && (
-        <div className="bg-dark-elevated border border-dark-border rounded-lg p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-gray-400 uppercase">
-              Progress
-            </span>
-            <span className="text-xs text-gold-500 font-semibold">
-              {stats.unlocked} / {stats.total}
-            </span>
-          </div>
-          
-          {/* Progress bar */}
-          <div className="w-full bg-dark-bg rounded-full h-2 mb-2">
-            <div
-              className="bg-gold-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${stats.total > 0 ? (stats.unlocked / stats.total) * 100 : 0}%` }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-500">
-              Required: {stats.required} ({stats.requiredUnlocked}/{stats.required} unlocked)
-            </span>
-            {stats.canAccuse && (
-              <span className="text-green-400 font-semibold">
-                ✓ Ready to accuse
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Evidence List */}
       {evidence.length === 0 ? (
         <Card className="text-center py-8">
