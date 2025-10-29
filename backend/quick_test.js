@@ -1,4 +1,4 @@
-// Quick Phase 10 Test Script
+    // Quick Phase 10 Test Script
 // Tests: Health Check → Game Creation → Chat → Evidence Detection
 
 require('dotenv').config();

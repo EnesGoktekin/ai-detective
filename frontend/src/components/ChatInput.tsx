@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from './Button';
-import { Input } from './Input';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -87,42 +85,42 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const isDisabled = disabled || loading || cooldownRemaining > 0;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2">
-      <div className="flex gap-2">
+    <form onSubmit={handleSubmit} className="chat-input-area bg-[#202C33] px-3 py-2">
+      <div className="flex items-center gap-2">
         <div className="flex-1">
-          <Input
+          <input
+            type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask a question about the case..."
+            placeholder="Type a message..."
             disabled={isDisabled}
-            error={error || undefined}
+            className="w-full bg-[#2A3942] text-white placeholder-gray-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           />
-        </div>
-        <Button
-          type="submit"
-          disabled={isDisabled}
-          isLoading={loading}
-          className="min-w-[100px]"
-        >
-          {cooldownRemaining > 0 ? `Wait ${cooldownRemaining}s` : 'Send'}
-        </Button>
-      </div>
-
-      {/* Validation hints */}
-      <div className="flex items-center justify-between text-xs">
-        <div className="text-gray-500">
-          {message.length > 0 && (
-            <span className={message.length < 2 ? 'text-red-400' : 'text-gray-500'}>
-              {message.trim().length} / 2 min
-            </span>
+          {error && (
+            <p className="text-red-400 text-xs mt-1 ml-1">{error}</p>
           )}
         </div>
-        {cooldownRemaining > 0 && (
-          <div className="text-gold-500">
-            Cooldown: {cooldownRemaining}s
-          </div>
-        )}
+        <button
+          id="send-button"
+          type="submit"
+          disabled={isDisabled}
+          className="bg-gold-600 hover:bg-gold-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-full p-3 transition-colors flex items-center justify-center"
+          aria-label="Send message"
+        >
+          {loading ? (
+            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          ) : cooldownRemaining > 0 ? (
+            <span className="text-xs font-bold">{cooldownRemaining}</span>
+          ) : (
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          )}
+        </button>
       </div>
     </form>
   );

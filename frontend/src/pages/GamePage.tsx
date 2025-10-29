@@ -10,6 +10,8 @@ import { ChatInterface } from '../components/ChatInterface';
 import { ChatInput } from '../components/ChatInput';
 import { EvidenceList } from '../components/EvidenceList';
 import { SuspectsList } from '../components/SuspectsList';
+import { GameTour } from '../components/GameTour';
+import { MobileGameTour } from '../components/MobileGameTour';
 import { buildApiUrl } from '@/config/api';
 
 interface GameData {
@@ -40,7 +42,11 @@ export default function GamePage() {
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showMobileEvidence, setShowMobileEvidence] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+  const [showMobileTour, setShowMobileTour] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [canAccuse, setCanAccuse] = useState(false);
+  const [detectiveProfileUrl, setDetectiveProfileUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!gameId) {
@@ -82,6 +88,57 @@ export default function GamePage() {
 
     fetchGameData();
   }, [gameId, navigate]);
+
+  // Fetch Detective X profile image from case API
+  useEffect(() => {
+    if (!gameData?.case_id) return;
+
+    const fetchDetectiveProfile = async () => {
+      try {
+        const response = await fetch(buildApiUrl(`/api/cases/${gameData.case_id}`));
+        if (response.ok) {
+          const data = await response.json();
+          if (data.detective_x_profile_url) {
+            setDetectiveProfileUrl(data.detective_x_profile_url);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch detective profile:', err);
+      }
+    };
+
+    fetchDetectiveProfile();
+  }, [gameData?.case_id]);
+
+  // Device detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Check if user has completed the tour (device-specific)
+  useEffect(() => {
+    if (!loading && gameData) {
+      if (isMobile) {
+        // Mobile tour
+        const hasCompletedMobileTour = localStorage.getItem('hasCompletedMobileGameTour');
+        if (!hasCompletedMobileTour) {
+          setTimeout(() => setShowMobileTour(true), 500);
+        }
+      } else {
+        // Desktop tour
+        const hasCompletedTour = localStorage.getItem('hasCompletedGameTour');
+        if (!hasCompletedTour) {
+          setTimeout(() => setShowTour(true), 500);
+        }
+      }
+    }
+  }, [loading, gameData, isMobile]);
 
   const handleMakeAccusation = () => {
     // Navigate to accusation page (to be implemented in Phase 6.13)
@@ -168,116 +225,93 @@ export default function GamePage() {
   }
 
   return (
-    <div className="min-h-screen max-h-screen bg-dark-bg flex flex-col overflow-hidden">
-      {/* Header - Mobile Optimized */}
-      <header className="bg-dark-surface border-b border-dark-border px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2 flex-shrink-0">
-        <div className="flex-1 flex items-center gap-2 sm:gap-3 min-w-0">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setShowExitConfirm(true)}
-            className="text-gray-400 hover:text-gold-500 shrink-0"
-          >
-            ← <span className="hidden sm:inline">Exit</span>
-          </Button>
-          <div className="min-w-0">
-            <h1 className="text-base sm:text-xl font-bold text-gold-500 truncate">{gameData?.case_title}</h1>
-            <p className="text-xs sm:text-sm text-gray-400 truncate">ID: {gameData?.game_id?.slice(0, 8)}...</p>
+    <div className="min-h-screen max-h-screen bg-dark-bg flex flex-col md:flex-row overflow-hidden">
+      {/* Main Content - Full height, no global header */}
+      {/* Chat Area - Main section (70% width on desktop) */}
+      <main className="flex-1 flex flex-col min-h-0 md:w-[70%]">
+        <ChatInterface 
+          messages={messages}
+          loading={messagesLoading}
+          error={error}
+          onExit={() => setShowExitConfirm(true)}
+          onOpenInvestigation={() => setShowMobileEvidence(true)}
+          detectiveProfileUrl={detectiveProfileUrl}
+          onHowToPlay={() => isMobile ? setShowMobileTour(true) : setShowTour(true)}
+        />
+
+        {/* Chat Input Area - WhatsApp style (no extra padding/border) */}
+        <ChatInput 
+          onSendMessage={handleSendMessage}
+          disabled={!gameData || gameData.status === 'completed'}
+          loading={messagesLoading}
+        />
+      </main>
+
+      {/* Right Panel - Tablet & Desktop (30% width, hidden on mobile) */}
+      <aside className="hidden md:flex md:flex-col md:w-[30%] border-l border-dark-border bg-dark-surface">
+        <div className="p-3 md:p-4 lg:p-5 space-y-4 md:space-y-6 overflow-y-auto">
+          {/* Case Title & ID - Desktop Only */}
+          <div className="border-b border-dark-border pb-4">
+            <h1 className="text-xl lg:text-2xl font-bold text-gold-500 mb-1">{gameData?.case_title}</h1>
+            <p className="text-sm text-gray-400">ID: {gameData?.game_id?.slice(0, 8)}...</p>
           </div>
-        </div>
-        <div className="flex gap-1 sm:gap-2 shrink-0">
-          {/* Mobile: Evidence button (opens modal with suspects + evidence) */}
-          {/* Hidden on tablet+ because sidebar is visible */}
-          <Button 
-            variant="secondary" 
-            size="sm"
-            onClick={() => setShowMobileEvidence(true)}
-            className="md:hidden"
-            aria-label="View Evidence and Suspects"
-          >
-            📋
-          </Button>
           
-          {/* How to Play - Always visible with responsive text */}
-          <Button 
-            variant="secondary" 
-            size="sm"
-            onClick={() => setShowHowToPlay(true)}
-            className="hidden sm:inline-flex"
-            aria-label="How to Play"
-          >
-            How to Play
-          </Button>
-          <Button 
-            variant="secondary" 
-            size="sm"
-            onClick={() => setShowHowToPlay(true)}
-            className="sm:hidden w-8 h-8 p-0 flex items-center justify-center"
-            aria-label="How to Play"
-          >
-            ?
-          </Button>
-          <Button 
-            variant="primary" 
-            size="sm"
-            onClick={handleMakeAccusation}
-            disabled={!canAccuse}
-            className="whitespace-nowrap text-xs sm:text-sm"
-          >
-            <span className="hidden sm:inline">Make Accusation</span>
-            <span className="sm:hidden">Accuse</span>
-          </Button>
-        </div>
-      </header>
+          {/* Action Buttons - Desktop Only */}
+          <div className="flex gap-2">
+            <Button 
+              variant="secondary" 
+              size="sm"
+              onClick={() => setShowTour(true)}
+              className="flex-1"
+            >
+              How to Play
+            </Button>
+            <Button 
+              id="make-accusation-button"
+              variant="primary" 
+              size="sm"
+              onClick={handleMakeAccusation}
+              disabled={!canAccuse}
+              className="flex-1"
+            >
+              Make Accusation
+            </Button>
+          </div>
+          
+          {/* Suspects Section */}
+          {gameData?.case_id && (
+            <SuspectsList caseId={gameData.case_id} />
+          )}
 
-      {/* Main Content - Responsive Layout */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* Chat Area - Main section */}
-        <main className="flex-1 flex flex-col min-h-0">
-          <ChatInterface 
-            messages={messages}
-            loading={messagesLoading}
-            error={error}
-          />
-
-          {/* Chat Input Area - Responsive padding */}
-          <div className="border-t border-dark-border p-2 sm:p-3 md:p-4 bg-dark-surface">
-            <div className="max-w-5xl mx-auto">
-              <ChatInput 
-                onSendMessage={handleSendMessage}
-                disabled={!gameData || gameData.status === 'completed'}
-                loading={messagesLoading}
+          {/* Evidence Section */}
+          <div id="evidence-collected">
+            <h2 className="text-xl font-bold text-gold-500 mb-3">Evidence Collected</h2>
+            {gameId && (
+              <EvidenceList 
+                gameId={gameId} 
+                onEvidenceUpdate={handleEvidenceUpdate}
               />
-            </div>
-          </div>
-        </main>
-
-        {/* Evidence Sidebar - Tablet & Desktop (hidden on mobile) */}
-        <aside className="hidden md:block md:w-64 lg:w-80 xl:w-96 border-l border-dark-border bg-dark-surface">
-          <div className="p-3 md:p-4 lg:p-5 space-y-4 md:space-y-6">
-            {/* Suspects Section */}
-            {gameData?.case_id && (
-              <SuspectsList caseId={gameData.case_id} />
             )}
-
-            {/* Evidence Section */}
-            <div>
-              <h2 className="text-xl font-bold text-gold-500 mb-3">Evidence Collected</h2>
-              {gameId && (
-                <EvidenceList 
-                  gameId={gameId} 
-                  onEvidenceUpdate={handleEvidenceUpdate}
-                />
-              )}
-            </div>
           </div>
-        </aside>
-      </div>
+        </div>
+      </aside>
 
       {/* How to Play Modal */}
       <HowToPlayModal 
         isOpen={showHowToPlay} 
         onClose={() => setShowHowToPlay(false)} 
+      />
+
+      {/* Guided Tour */}
+      <GameTour 
+        isOpen={showTour} 
+        onClose={() => setShowTour(false)} 
+      />
+
+      {/* Mobile Guided Tour */}
+      <MobileGameTour
+        isOpen={showMobileTour}
+        onClose={() => setShowMobileTour(false)}
       />
 
       {/* Mobile Evidence Sheet - Only visible on mobile/tablet */}
@@ -286,7 +320,11 @@ export default function GamePage() {
         onClose={() => setShowMobileEvidence(false)}
         caseId={gameData?.case_id}
         gameId={gameId}
+        caseTitle={gameData?.case_title}
         onEvidenceUpdate={handleEvidenceUpdate}
+        onMakeAccusation={handleMakeAccusation}
+        canAccuse={canAccuse}
+        disableBackdrop={showMobileTour}
       />
 
       {/* Exit Game Confirmation */}

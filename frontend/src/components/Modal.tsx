@@ -6,6 +6,7 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  disableBackdrop?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -14,6 +15,7 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   children,
   size = 'md',
+  disableBackdrop = false,
 }) => {
   // Handle ESC key
   useEffect(() => {
@@ -43,12 +45,14 @@ export const Modal: React.FC<ModalProps> = ({
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby={title ? 'modal-title' : undefined}>
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      {/* Backdrop - Conditionally rendered */}
+      {!disableBackdrop && (
+        <div
+          className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
       
       {/* Modal */}
       <div

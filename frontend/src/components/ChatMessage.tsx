@@ -10,31 +10,26 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ sender, content, times
   const isUser = sender === 'user';
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
-      <div className={`max-w-[80%] ${isUser ? 'order-2' : 'order-1'}`}>
-        {/* Message bubble */}
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-2`}>
+      <div className={`max-w-[75%] ${isUser ? 'order-2' : 'order-1'}`}>
+        {/* WhatsApp-style Message bubble */}
         <div
           className={`
-            rounded-lg px-4 py-3 
+            rounded-lg px-3 py-2 shadow-sm
             ${isUser 
-              ? 'bg-gold-600 text-dark-bg' 
-              : 'bg-dark-elevated text-gray-100 border border-dark-border'
+              ? 'bg-[#005C4B] text-white rounded-br-none' 
+              : 'bg-[#202C33] text-gray-100 rounded-bl-none'
             }
           `}
         >
-          {/* Sender label */}
-          <div className={`text-xs font-semibold mb-1 ${isUser ? 'text-dark-surface' : 'text-gold-500'}`}>
-            {isUser ? 'You' : 'Detective AI'}
-          </div>
-          
           {/* Message content */}
           <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
             {content}
           </div>
           
-          {/* Timestamp */}
+          {/* Timestamp - WhatsApp style (bottom right) */}
           {timestamp && (
-            <div className={`text-xs mt-1 ${isUser ? 'text-dark-surface/70' : 'text-gray-500'}`}>
+            <div className={`text-[10px] mt-1 text-right ${isUser ? 'text-gray-300' : 'text-gray-500'}`}>
               {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
           )}

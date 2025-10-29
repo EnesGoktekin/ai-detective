@@ -20,7 +20,7 @@ router.get('/', async (_req: Request, res: Response) => {
   try {
     const { data: cases, error } = await supabase
       .from('cases')
-      .select('case_id, title, description, suspects_list, created_at')
+      .select('case_id, title, description, created_at')
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -52,12 +52,20 @@ router.get('/', async (_req: Request, res: Response) => {
 router.get('/:case_id', async (req: Request, res: Response) => {
   try {
     const { case_id } = req.params;
+    
+    if (!case_id) {
+      return res.status(400).json({
+        error: 'Case ID is required',
+      });
+    }
+    
+    const trimmedCaseId = case_id.trim(); // CRITICAL: Trim whitespace for UUID matching
 
-    // Fetch case
+    // Fetch case (exclude suspects_list JSONB - use relational table only)
     const { data: caseData, error: caseError } = await supabase
       .from('cases')
-      .select('*')
-      .eq('case_id', case_id)
+      .select('case_id, title, description, initial_prompt_data, created_at')
+      .eq('case_id', trimmedCaseId)
       .single();
 
     if (caseError || !caseData) {
@@ -67,11 +75,11 @@ router.get('/:case_id', async (req: Request, res: Response) => {
       });
     }
 
-    // Fetch suspects
+    // Fetch suspects (relational table - primary source)
     const { data: suspects, error: suspectsError } = await supabase
       .from('suspects')
-      .select('suspect_id, name, backstory, is_guilty, created_at')
-      .eq('case_id', case_id)
+      .select('suspect_id, name, backstory, profile_image_url, is_guilty, created_at')
+      .eq('case_id', trimmedCaseId)
       .order('created_at', { ascending: true });
 
     if (suspectsError) {
@@ -82,7 +90,7 @@ router.get('/:case_id', async (req: Request, res: Response) => {
     const { data: sceneObjects, error: objectsError } = await supabase
       .from('scene_objects')
       .select('*')
-      .eq('case_id', case_id)
+      .eq('case_id', trimmedCaseId)
       .order('created_at', { ascending: true });
 
     if (objectsError) {
@@ -93,11 +101,22 @@ router.get('/:case_id', async (req: Request, res: Response) => {
     const { data: evidence, error: evidenceError } = await supabase
       .from('evidence_lookup')
       .select('*')
-      .eq('case_id', case_id)
+      .eq('case_id', trimmedCaseId)
       .order('created_at', { ascending: true });
 
     if (evidenceError) {
       console.error('Error fetching evidence:', evidenceError);
+    }
+
+    // Fetch Lead Investigator (Detective X) profile image
+    const { data: leadInvestigator, error: investigatorError } = await supabase
+      .from('main_characters')
+      .select('profile_image_url')
+      .eq('role', 'Lead Investigator / Player Partner')
+      .single();
+
+    if (investigatorError) {
+      console.error('SUPABASE LEAD INVESTIGATOR QUERY ERROR:', investigatorError);
     }
 
     return res.json({
@@ -106,6 +125,7 @@ router.get('/:case_id', async (req: Request, res: Response) => {
       suspects: suspects || [],
       scene_objects: sceneObjects || [],
       evidence: evidence || [],
+      detective_x_profile_url: leadInvestigator?.profile_image_url || null,
       stats: {
         total_suspects: suspects?.length || 0,
         total_scene_objects: sceneObjects?.length || 0,

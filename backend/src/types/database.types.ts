@@ -43,12 +43,6 @@ export interface Case {
     initial_scene: string;
     case_context: Record<string, any>;
   };
-  suspects_list: {
-    suspects: Array<{
-      id: string;
-      name: string;
-    }>;
-  };
   created_at: string; // ISO 8601 timestamp
 }
 
@@ -61,6 +55,7 @@ export interface Suspect {
   case_id: string; // Foreign key to cases
   name: string;
   backstory: string;
+  profile_image_url?: string; // Optional profile image URL
   is_guilty: boolean; // Truth-blind flag
   created_at: string; // ISO 8601 timestamp
 }
@@ -153,7 +148,6 @@ export interface CaseListItem {
   case_id: string;
   title: string;
   description: string;
-  suspects_list: Case['suspects_list'];
 }
 
 /**
