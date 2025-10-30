@@ -1,14 +1,141 @@
 # Detective AI - Project Status & Updates
 
 ## Last Updated
-October 26, 2025 (Phase 10 Complete - Ready for Deployment)
+October 30, 2025 (Major UI/UX Enhancements Complete)
 
 ## 🚧 Currently Working On
 Phase 11: Deployment & Launch
 
 ---
 
-## 📊 Recent Updates (October 26, 2025)
+## 📊 Recent Updates (October 30, 2025)
+
+### Major UI/UX Enhancement Release ✅
+
+#### 🎨 Cinematic Suspect Profile System
+- **Full-Screen Background Modal:** Suspect profile images now display as immersive full-screen backgrounds
+- **Animated Backstory Toggle:** Smooth hide/show transitions with backdrop blur (4px) overlay
+- **Smart Toggle Button:** Positioned at blur box edge with precise padding compensation (calc(-50% - 16px))
+- **Custom Gold Scrollbar:** 6px width scrollbar with semi-transparent gold theme for backstory text
+- **No Scrollbar on List:** Removed scrollbar from suspects list for cleaner UI
+- **Profile Images:** All 3 suspects now display with circular profile images from Supabase Storage
+
+#### 💬 WhatsApp-Style Chat Interface
+- **DetectiveXChatHeader Component (NEW):** Professional chat header with profile image, online status, typing indicator
+- **Dynamic Profile Images:** Detective X profile image fetched from `main_characters` table
+- **Online Status Indicator:** Green dot shows when Detective X is online
+- **Typing Animation:** Three-dot bounce animation when AI is generating response
+- **WhatsApp Chat Bubbles:** User messages (green), AI messages (dark gray), compact timestamps
+- **Background Pattern:** Subtle diagonal striped pattern mimicking WhatsApp
+- **No Generic Headers:** Removed global header, chat header contains all controls
+
+#### 🎯 Guided Tour System (NEW)
+- **Desktop Tour (GameTour.tsx):** 5-step interactive tutorial with spotlight effects
+  - Step 1: Suspects List
+  - Step 2: Evidence Collected
+  - Step 3: Chat Input Area
+  - Step 4: Send Button
+  - Step 5: Make Accusation Button
+- **Mobile Tour (MobileGameTour.tsx):** 2-step mobile-optimized tutorial
+  - Step 1: Investigation Info Button
+  - Step 2: Chat Input Area
+- **Smart Positioning:** 300ms delay after scroll for accurate tooltip positioning
+- **Golden Spotlight:** Pulsing golden border with glow effect (box-shadow animation)
+- **SVG Mask Overlay:** Cut-out effect with dark overlay everywhere except spotlight
+- **Keyboard Navigation:** Back/Continue/Skip buttons, ESC key support
+- **Auto-Launch:** Tours appear on first visit (localStorage tracking)
+- **Device Detection:** Correct tour shown based on screen size
+
+#### 📱 Mobile Enhancements
+- **Mobile How to Play Button (NEW):** Question mark icon in chat header (md:hidden)
+- **Three-Button Header:** Exit (←), How to Play (?), Investigation Info (📄)
+- **Device-Aware Handler:** Opens correct tour based on screen size (mobile vs desktop)
+- **Improved Evidence Sheet:** Now includes case title, game ID, Make Accusation button
+- **Props Chain Integration:** GamePage → ChatInterface → DetectiveXChatHeader
+
+#### 🎨 Visual & UX Improvements
+- **Chat Input Redesign:** WhatsApp-style rounded input with send button, cooldown timer
+- **Message Timestamps:** Bottom-right placement (10px font) like WhatsApp
+- **Compact Messages:** Reduced padding (px-3 py-2) for authentic chat feel
+- **No Sender Labels:** User/AI distinction by color only (green vs dark)
+- **Custom Scrollbars:** Gold-themed scrollbars with 8px width, semi-transparent
+- **Smooth Animations:** 300ms transitions for all interactive elements
+
+#### 🗄️ Backend Updates
+- **Detective X Profile Query:** New query from `main_characters` table with role filter
+- **API Response Addition:** `detective_x_profile_url` field added to `/api/cases/:case_id`
+- **Database Schema Fix:** Removed non-existent `role` field from suspects queries
+- **Suspects Query Update:** Now correctly fetches `profile_image_url` for each suspect
+- **Error Handling:** Graceful fallback when Detective X profile not found
+
+#### 🐛 Bug Fixes
+- **Tour Positioning Issue:** Added 300ms setTimeout before tooltip position calculation
+  - Fixes: Tooltips appearing before scroll animation completes
+  - Impact: Make Accusation button spotlight now positions correctly
+- **Suspects Loading Issue:** Fixed `role` column error (PostgreSQL error 42703)
+  - Issue: Backend was requesting non-existent `role` column
+  - Solution: Removed from query, interface, and UI displays
+  - Result: 3 suspects now load successfully with profile images
+- **Evidence Scroll Conflict:** Tour positioning now waits for scroll stabilization
+  - Issue: How to Play click → scroll down → tooltip misaligned
+  - Solution: 300ms delay in both GameTour and MobileGameTour
+- **Mobile Button Missing:** Restored "How to Play" access on mobile devices
+  - Issue: Button only visible in desktop sidebar
+  - Solution: Added separate button to DetectiveXChatHeader with `md:hidden`
+
+#### � Files Created/Modified
+
+**New Components:**
+- `frontend/src/components/DetectiveXChatHeader.tsx` - WhatsApp-style chat header (116 lines)
+- `frontend/src/components/GameTour.tsx` - Desktop guided tour with spotlight (350+ lines)
+- `frontend/src/components/MobileGameTour.tsx` - Mobile guided tour (300+ lines)
+
+**Modified Components:**
+- `frontend/src/components/SuspectsList.tsx` - Cinematic modal, toggle animations, profile images
+- `frontend/src/components/ChatInterface.tsx` - WhatsApp layout, DetectiveXChatHeader integration
+- `frontend/src/components/ChatMessage.tsx` - WhatsApp bubble style, compact timestamps
+- `frontend/src/components/ChatInput.tsx` - WhatsApp input design, cooldown timer
+- `frontend/src/components/MobileEvidenceSheet.tsx` - Case title, Make Accusation button
+- `frontend/src/components/Modal.tsx` - Added `disableBackdrop` prop for tour overlay
+- `frontend/src/components/index.ts` - Exported new components
+- `frontend/src/pages/GamePage.tsx` - Tour integration, Detective X profile fetch, layout redesign
+- `frontend/src/index.css` - Custom scrollbar styles for chat and suspect modal
+
+**Backend Updates:**
+- `backend/src/routes/cases.routes.ts` - Detective X profile query, removed `role` field
+- `backend/src/types/database.types.ts` - Updated Suspect interface, removed suspects_list
+- `backend/quick_test.js` - Minor formatting change
+
+#### 🔐 Security
+- All commits scanned with Snyk Code SAST
+- 0 vulnerabilities found
+- Feedback sent to Snyk for issues prevented
+
+#### 📊 Statistics
+- **15 files changed**
+- **1,337 insertions**, 234 deletions
+- **3 new components** created
+- **Commit Hash:** 7d0e3a1
+- **Branch:** main → origin/main
+
+#### 🎯 User Experience Impact
+- **Immersive Design:** Cinematic suspect profiles create emotional connection
+- **Professional Chat:** WhatsApp-style interface feels familiar and polished
+- **Guided Onboarding:** Tours reduce learning curve for new players
+- **Mobile Parity:** All desktop features now accessible on mobile
+- **Visual Consistency:** Gold theme and dark aesthetics throughout
+- **Performance:** No performance degradation, smooth animations
+
+#### ⏭️ Next Steps
+1. User testing on mobile devices
+2. Verify Detective X profile image loads correctly
+3. Test guided tours on various screen sizes
+4. Accessibility audit for new components
+5. Continue Phase 11: Deployment & Launch
+
+---
+
+## 📊 Previous Updates (October 26, 2025)
 
 ### Phase 10: Testing & Quality Assurance - COMPLETE ✅
 
