@@ -32,11 +32,17 @@ export const SessionControl: React.FC = () => {
       setShowModal(true);
     } else {
       // No valid existing session - fast path to new game
+      // Note: Even if session is invalid, we still pass it for cleanup
+      const oldGameId = existingSession && existingSession !== 'undefined' && existingSession !== 'null' 
+        ? existingSession 
+        : undefined;
+      
+      // Clean up invalid session data if exists
       if (existingSession) {
-        // Clean up invalid session data
         localStorage.removeItem(sessionKey);
       }
-      handleNewGame();
+      
+      handleNewGame(oldGameId);
     }
   }, [caseId]);
 
@@ -76,8 +82,16 @@ export const SessionControl: React.FC = () => {
         throw new Error('Invalid response: missing game_id');
       }
 
+      // CRITICAL: Remove old session before saving new one
+      const sessionKey = `game_session_${caseId}`;
+      if (oldGameId) {
+        console.log('Removing old session from localStorage:', oldGameId);
+        localStorage.removeItem(sessionKey);
+      }
+
       // Save new session to localStorage
-      localStorage.setItem(`game_session_${caseId}`, gameId);
+      localStorage.setItem(sessionKey, gameId);
+      console.log('New session saved to localStorage:', gameId);
       console.log('Navigating to game:', gameId);
 
       // Navigate to game page
@@ -104,8 +118,8 @@ export const SessionControl: React.FC = () => {
     const sessionKey = `game_session_${caseId}`;
     const oldGameId = localStorage.getItem(sessionKey);
     
-    // Remove old session from localStorage
-    localStorage.removeItem(sessionKey);
+    // Close modal and start new game
+    // Note: localStorage cleanup happens in handleNewGame
     setShowModal(false);
     
     // Start new game and pass old_game_id for server-side cleanup
