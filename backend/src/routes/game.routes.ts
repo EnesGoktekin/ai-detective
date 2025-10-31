@@ -1,23 +1,81 @@
 import { Router, Request, Response } from 'express';
 import { supabase } from '../utils/database';
+import { logger } from '../services/logger.service';
+import { tracingMiddleware } from '../middleware/tracing.middleware';
 
 const router = Router();
 
 /**
  * POST /api/games/start
  * Start a new game session
+ * 
+ * Request body:
+ * {
+ *   "case_id": "uuid",
+ *   "old_game_id": "uuid" (optional - for cleanup)
+ * }
+ * 
+ * Cleanup Logic:
+ * - If old_game_id is provided, deletes the old game session
+ * - CASCADE deletes: messages, evidence_unlocked, game_path_progress
+ * - Useful for anonymous users who store game_id in localStorage
  */
-router.post('/start', async (req: Request, res: Response) => {
+router.post('/start', tracingMiddleware, async (req: Request, res: Response) => {
+  const traceId = req.traceId;
+  
   try {
-    const { case_id } = req.body;
+    const { case_id, old_game_id } = req.body;
+
+    logger.info('[Game] Starting new game session', traceId);
 
     if (!case_id) {
+      logger.debug('[Game] Missing case_id in request', traceId);
       return res.status(400).json({
         error: 'case_id is required',
       });
     }
 
-    // Verify case exists
+    // ============================================
+    // STEP 1: Cleanup old game session (if provided)
+    // ============================================
+    
+    if (old_game_id) {
+      logger.info(`[Game] Cleaning up old game session: ${old_game_id}`, traceId);
+      
+      try {
+        // Delete old game (CASCADE will auto-delete related records)
+        const { error: deleteError } = await supabase
+          .from('games')
+          .delete()
+          .eq('game_id', old_game_id);
+
+        if (deleteError) {
+          logger.error(
+            `[Game] Failed to delete old game: ${old_game_id}`,
+            deleteError,
+            traceId
+          );
+          // Continue anyway - don't block new game creation
+        } else {
+          logger.info(
+            `[Game] Successfully cleaned up old game: ${old_game_id}`,
+            traceId
+          );
+        }
+      } catch (cleanupError) {
+        logger.error(
+          '[Game] Unexpected error during cleanup',
+          cleanupError as Error,
+          traceId
+        );
+        // Continue anyway - don't block new game creation
+      }
+    }
+
+    // ============================================
+    // STEP 2: Verify case exists
+    // ============================================
+
     const { data: caseData, error: caseError } = await supabase
       .from('cases')
       .select('case_id, title')
@@ -25,13 +83,19 @@ router.post('/start', async (req: Request, res: Response) => {
       .single();
 
     if (caseError || !caseData) {
+      logger.error('[Game] Case not found', caseError || new Error('Case not found'), traceId);
       return res.status(404).json({
         error: 'Case not found',
         details: caseError?.message,
       });
     }
 
-    // Create new game session
+    logger.debug(`[Game] Case found: ${caseData.title}`, traceId);
+
+    // ============================================
+    // STEP 3: Create new game session
+    // ============================================
+
     const { data: game, error: gameError } = await supabase
       .from('games')
       .insert({
@@ -45,11 +109,14 @@ router.post('/start', async (req: Request, res: Response) => {
       .single();
 
     if (gameError || !game) {
+      logger.error('[Game] Failed to create game session', gameError || new Error('Game creation failed'), traceId);
       return res.status(500).json({
         error: 'Failed to create game session',
         details: gameError?.message,
       });
     }
+
+    logger.info(`[Game] New game session created: ${game.game_id}`, traceId);
 
     return res.status(201).json({
       success: true,
@@ -62,7 +129,7 @@ router.post('/start', async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error starting game:', error);
+    logger.error('[Game] Error starting game', error as Error, traceId);
     return res.status(500).json({
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error',
