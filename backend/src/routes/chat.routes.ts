@@ -319,6 +319,29 @@ router.post('/:game_id/chat', tracingMiddleware, async (req: Request, res: Respo
         `[Chat] Discovery progress updated for game ${game_id}`,
         traceId
       );
+    } else {
+      // No keyword match - provide guidance on available next steps
+      // Pick the first available next step as a suggestion
+      if (availableNextSteps.length > 0) {
+        const suggestedStep = availableNextSteps[0];
+        if (suggestedStep) {
+          nextExpectedStepDetails = {
+            object_name: suggestedStep.object_name,
+            unlock_keyword: suggestedStep.unlock_keyword,
+            step_number: suggestedStep.step_number,
+          };
+          
+          logger.debug(
+            `[Chat] No match found - suggesting available step: ${suggestedStep.object_name}`,
+            traceId
+          );
+        }
+      } else {
+        logger.debug(
+          `[Chat] No available next steps - investigation may be complete`,
+          traceId
+        );
+      }
     }
 
     // ============================================
