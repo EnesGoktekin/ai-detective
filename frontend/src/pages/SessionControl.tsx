@@ -8,29 +8,57 @@ export const SessionControl: React.FC = () => {
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
 
+  /**
+   * Session Control Logic:
+   * 
+   * Fast Path (No Existing Session):
+   * - Check localStorage for game_session_{caseId}
+   * - If no valid session exists, skip modal
+   * - Directly create new game via POST /api/games/start
+   * - Navigate to /game/{new_game_id}
+   * 
+   * Modal Path (Existing Session Found):
+   * - Show modal with Resume/Start New options
+   * - Resume: Navigate to existing game
+   * - Start New: Delete old session + Create new game with old_game_id cleanup
+   */
   useEffect(() => {
     // Check localStorage for existing session for this case
     const sessionKey = `game_session_${caseId}`;
     const existingSession = localStorage.getItem(sessionKey);
     
     if (existingSession && existingSession !== 'undefined' && existingSession !== 'null') {
+      // Existing session found - show modal
       setShowModal(true);
     } else {
-      // No valid existing session, clear invalid one and create new game
+      // No valid existing session - fast path to new game
       if (existingSession) {
+        // Clean up invalid session data
         localStorage.removeItem(sessionKey);
       }
       handleNewGame();
     }
   }, [caseId]);
 
-  const handleNewGame = async () => {
+  const handleNewGame = async (oldGameId?: string) => {
     try {
       console.log('Creating new game for case:', caseId);
+      
+      // Prepare request body
+      const requestBody: { case_id: string; old_game_id?: string } = {
+        case_id: caseId!
+      };
+      
+      // Include old_game_id for cleanup if provided
+      if (oldGameId) {
+        requestBody.old_game_id = oldGameId;
+        console.log('Cleaning up old game:', oldGameId);
+      }
+      
       const response = await fetch(buildApiUrl('/api/games/start'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ case_id: caseId }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -48,7 +76,7 @@ export const SessionControl: React.FC = () => {
         throw new Error('Invalid response: missing game_id');
       }
 
-      // Save session to localStorage
+      // Save new session to localStorage
       localStorage.setItem(`game_session_${caseId}`, gameId);
       console.log('Navigating to game:', gameId);
 
@@ -73,10 +101,15 @@ export const SessionControl: React.FC = () => {
   };
 
   const handleOverwriteSession = () => {
-    // Delete old session
-    localStorage.removeItem(`game_session_${caseId}`);
+    const sessionKey = `game_session_${caseId}`;
+    const oldGameId = localStorage.getItem(sessionKey);
+    
+    // Remove old session from localStorage
+    localStorage.removeItem(sessionKey);
     setShowModal(false);
-    handleNewGame();
+    
+    // Start new game and pass old_game_id for server-side cleanup
+    handleNewGame(oldGameId || undefined);
   };
 
   return (
