@@ -61,15 +61,19 @@ export async function getGamePathProgress(
 }
 
 /**
- * Get all next steps for a case from evidence_discovery_paths
+ * Get all next available steps for a case from evidence_discovery_paths
  * 
- * This function fetches ALL steps for the case (no filtering)
- * Filtering will be done in Task 3
+ * Fetches all discovery paths for the case and filters in TypeScript to return
+ * only the next available steps based on current game progress.
+ * 
+ * Filtering Logic:
+ * - Returns steps where step_number === (last_completed_step + 1) for each path
+ * - If no progress exists for a path, returns step_number === 1 (first steps)
  * 
  * @param caseId - The case ID
  * @param traceId - Trace ID for request tracking
- * @param progressList - Current game progress (not used for filtering in this function)
- * @returns Array of all evidence discovery path steps for the case
+ * @param progressList - Current game progress for filtering
+ * @returns Array of next available evidence discovery path steps
  */
 export async function getAllNextStepsForCase(
   caseId: string,
@@ -82,9 +86,10 @@ export async function getAllNextStepsForCase(
   );
 
   try {
+    // Fetch all steps for this case
     const { data, error } = await supabase
       .from('evidence_discovery_paths')
-      .select('path_id, step_number, object_name, unlock_keyword, is_unlock_trigger, ai_description, case_id')
+      .select('path_id, step_number, object_name, unlock_keyword, is_unlock_trigger, ai_description, case_id, parent_step_number')
       .eq('case_id', caseId);
 
     if (error) {
@@ -96,12 +101,38 @@ export async function getAllNextStepsForCase(
       throw error;
     }
 
-    logger.info(
-      `[DB] Successfully fetched ${data?.length || 0} discovery path steps for case: ${caseId}`,
+    const allSteps = (data || []) as EvidenceDiscoveryPath[];
+    
+    logger.debug(
+      `[DB] Fetched ${allSteps.length} total steps, now filtering for next available steps`,
       traceId
     );
 
-    return (data || []) as EvidenceDiscoveryPath[];
+    // Create a map of path_id to last_completed_step for quick lookup
+    const progressMap = new Map<string, number>();
+    progressList.forEach((progress) => {
+      progressMap.set(progress.path_id, progress.last_completed_step);
+    });
+
+    // Filter to get only next available steps
+    const nextSteps = allSteps.filter((step) => {
+      const currentProgress = progressMap.get(step.path_id);
+      
+      // If no progress for this path, return first step (step_number === 1)
+      if (currentProgress === undefined) {
+        return step.step_number === 1;
+      }
+      
+      // Return next step (step_number === last_completed_step + 1)
+      return step.step_number === currentProgress + 1;
+    });
+
+    logger.info(
+      `[DB] Filtered to ${nextSteps.length} next available steps for case: ${caseId}`,
+      traceId
+    );
+
+    return nextSteps;
   } catch (error) {
     logger.error(
       `[DB] Unexpected error fetching discovery paths for case: ${caseId}`,

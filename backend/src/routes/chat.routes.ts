@@ -1,16 +1,22 @@
 /**
  * Chat Routes
  * 
- * Main gameplay interaction endpoint
+ * Main gameplay interaction endpoint with hierarchical evidence discovery
  * Handles user messages, AI responses, evidence unlocking
  * 
- * Phase 5, Step 5.2
+ * Phase 12: Hierarchical Evidence System Integration
  */
 
 import { Router, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { generateChatResponse } from '../services/gemini.service';
-import { detectEvidenceInMessage } from '../utils/evidence-detection';
+import { tracingMiddleware } from '../middleware/tracing.middleware';
+import { logger } from '../services/logger.service';
+import {
+  getGamePathProgress,
+  getAllNextStepsForCase,
+  updatePathProgress,
+} from '../services/database.service';
 import {
   assembleAIContext,
   incrementMessageCount,
@@ -25,9 +31,18 @@ const supabase = createClient(
 const router = Router();
 
 /**
+ * Mock unlockEvidence function
+ * TODO: Replace with actual implementation
+ */
+async function unlockEvidence(gameId: string, pathId: string, traceId: string): Promise<void> {
+  logger.info(`[MOCK] Unlocking evidence for game: ${gameId}, path: ${pathId}`, traceId);
+  // Actual implementation will unlock evidence in evidence_unlocked table
+}
+
+/**
  * POST /api/games/:game_id/chat
  * 
- * Send a user message and get AI response
+ * Send a user message and get AI response with hierarchical evidence discovery
  * 
  * Request body:
  * {
@@ -40,15 +55,24 @@ const router = Router();
  *   "ai_response": "There are three main suspects...",
  *   "new_evidence_unlocked": ["ev-123", "ev-456"],
  *   "message_count": 6,
- *   "summary_triggered": true
+ *   "summary_triggered": true,
+ *   "discovery_progress": {
+ *     "step_completed": true,
+ *     "description": "You discovered something important..."
+ *   }
  * }
  */
-router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void> => {
+router.post('/:game_id/chat', tracingMiddleware, async (req: Request, res: Response): Promise<void> => {
+  const traceId = req.traceId;
+  
   try {
     const { game_id } = req.params;
     const { message } = req.body;
 
+    logger.info(`[Chat] New message for game: ${game_id}`, traceId);
+
     if (!game_id) {
+      logger.debug('[Chat] Missing game_id parameter', traceId);
       res.status(400).json({
         success: false,
         error: 'Game ID is required',
@@ -172,87 +196,121 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
     }
 
     // ============================================
-    // STEP 4: Evidence Detection
+    // STEP 4: Hierarchical Evidence Discovery
     // ============================================
 
-    // Get all evidence for this case
-    const { data: caseEvidence, error: evidenceError } = await supabase
-      .from('evidence_lookup')
-      .select('*')
-      .eq('case_id', game.case_id);
+    logger.debug(`[Chat] Starting hierarchical evidence discovery for case: ${game.case_id}`, traceId);
 
-    if (evidenceError) {
-      console.error('Error fetching evidence:', evidenceError);
+    // Get current game path progress
+    const progressList = await getGamePathProgress(game_id, traceId);
+    
+    // Get all next available steps for this case
+    const availableNextSteps = await getAllNextStepsForCase(
+      game.case_id,
+      traceId,
+      progressList
+    );
+
+    logger.debug(
+      `[Chat] Found ${availableNextSteps.length} available next steps to check`,
+      traceId
+    );
+
+    // Check user message against available steps
+    let foundNextStep = null;
+    let matchedKeyword = '';
+
+    for (const step of availableNextSteps) {
+      // Split unlock_keyword by comma and check each keyword
+      const keywords = step.unlock_keyword.split(',').map(k => k.trim().toLowerCase());
+      const userMessageLower = trimmedMessage.toLowerCase();
+
+      for (const keyword of keywords) {
+        if (userMessageLower.includes(keyword)) {
+          foundNextStep = step;
+          matchedKeyword = keyword;
+          logger.info(
+            `[Chat] Matched keyword "${keyword}" in step ${step.step_number} of path ${step.path_id}`,
+            traceId
+          );
+          break;
+        }
+      }
+
+      if (foundNextStep) break;
     }
 
-    // Map database field 'display_name' to expected 'name' field
-    const evidenceWithCorrectFields = caseEvidence?.map(ev => ({
-      evidence_id: ev.evidence_id,
-      name: ev.display_name, // Map display_name to name
-      unlock_keywords: ev.unlock_keywords,
-      is_required_for_accusation: ev.is_required_for_accusation,
-    })) || [];
+    // Process matched step
+    let newlyUnlockedEvidence: string[] = [];
+    let discoveryProgress = null;
 
-    // Get already unlocked evidence WITH DETAILS for AI context
+    if (foundNextStep) {
+      // Update path progress
+      await updatePathProgress(
+        game_id,
+        foundNextStep.path_id,
+        foundNextStep.step_number,
+        traceId
+      );
+
+      // Check if this step unlocks evidence
+      if (foundNextStep.is_unlock_trigger) {
+        logger.error(
+          `[CRITICAL] Evidence unlock triggered! Path: ${foundNextStep.path_id}, Step: ${foundNextStep.step_number}`,
+          new Error('Evidence unlock trigger'),
+          traceId
+        );
+
+        // Call mock unlockEvidence function
+        await unlockEvidence(game_id, foundNextStep.path_id, traceId);
+        
+        // TODO: Get actual evidence IDs from database
+        newlyUnlockedEvidence = [foundNextStep.path_id]; // Placeholder
+      }
+
+      discoveryProgress = {
+        step_completed: true,
+        step_number: foundNextStep.step_number,
+        path_id: foundNextStep.path_id,
+        description: foundNextStep.ai_description,
+        matched_keyword: matchedKeyword,
+      };
+
+      logger.info(
+        `[Chat] Discovery progress updated for game ${game_id}`,
+        traceId
+      );
+    }
+
+    // ============================================
+    // STEP 5: Assemble AI Context with Discovery Info
+    // ============================================
+
+    const aiContext = await assembleAIContext(game_id);
+
+    // Get unlocked evidence for AI context
     const { data: unlockedEvidenceDetails } = await supabase
       .from('evidence_unlocked')
       .select(`
         evidence_id,
         evidence_lookup (
           display_name,
-          description,
-          location
+          description
         )
       `)
       .eq('game_id', game_id);
 
-    const alreadyUnlocked = unlockedEvidenceDetails?.map(e => e.evidence_id) || [];
-    
-    // Format unlocked evidence for AI (progressive disclosure)
     const unlockedEvidenceForAI = (unlockedEvidenceDetails || []).map((item: any) => ({
       name: item.evidence_lookup?.display_name || 'Unknown',
       description: item.evidence_lookup?.description || 'No description',
-      location: item.evidence_lookup?.location || 'Unknown location',
+      location: 'Unknown', // Placeholder for compatibility
     }));
 
-    // Detect new evidence in user message
-    const newlyDetectedEvidence = evidenceWithCorrectFields.length > 0
-      ? detectEvidenceInMessage(trimmedMessage, evidenceWithCorrectFields, alreadyUnlocked)
-      : [];
-
-    console.log('🔍 User message evidence detection:');
-    console.log('  Message:', trimmedMessage);
-    console.log('  Detected:', newlyDetectedEvidence);
-    console.log('  Already unlocked:', alreadyUnlocked.length);
-
-    // Unlock newly detected evidence
-    if (newlyDetectedEvidence.length > 0) {
-      const evidenceToInsert = newlyDetectedEvidence.map(evidenceId => ({
-        game_id,
-        evidence_id: evidenceId,
-      }));
-
-      const { error: unlockError } = await supabase
-        .from('evidence_unlocked')
-        .insert(evidenceToInsert);
-
-      if (unlockError) {
-        console.error('Error unlocking evidence:', unlockError);
-      }
-    }
-
     // ============================================
-    // STEP 5: Assemble AI Context
-    // ============================================
-
-    const aiContext = await assembleAIContext(game_id);
-
-    // ============================================
-    // STEP 6: Generate AI Response
+    // STEP 6: Generate AI Response with Discovery Context
     // ============================================
 
     // Prepare case context for AI
-    // Map display_name to name for consistency
     const caseContext = {
       case_title: game.cases.title,
       case_description: game.cases.description,
@@ -262,54 +320,25 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
       evidence_lookup: (game.cases.evidence_lookup || []).map((ev: any) => ({
         name: ev.display_name,
         description: ev.description,
-        location: ev.location,
       })),
     };
 
+    // Enhance AI context with discovery information
+    const enhancedContext = {
+      ...caseContext,
+      discovery: foundNextStep ? foundNextStep.ai_description : null,
+      isFinalEvidence: foundNextStep ? foundNextStep.is_unlock_trigger : false,
+    };
+
+    logger.debug('[Chat] Generating AI response with enhanced context', traceId);
+
     const aiResponse = await generateChatResponse(
-      caseContext,
-      unlockedEvidenceForAI, // Progressive evidence disclosure - only show unlocked
+      enhancedContext,
+      unlockedEvidenceForAI,
       aiContext.summary,
       aiContext.recentMessages,
       trimmedMessage
     );
-
-    // ============================================
-    // STEP 6.5: Detect Evidence in AI Response
-    // ============================================
-
-    // Check AI response for evidence keywords too
-    const evidenceInAIResponse = evidenceWithCorrectFields.length > 0
-      ? detectEvidenceInMessage(
-          aiResponse, 
-          evidenceWithCorrectFields, 
-          [...alreadyUnlocked, ...newlyDetectedEvidence] // Don't re-unlock what we just unlocked
-        )
-      : [];
-
-    console.log('🤖 AI response evidence detection:');
-    console.log('  AI message:', aiResponse.substring(0, 200) + '...');
-    console.log('  Detected:', evidenceInAIResponse);
-    console.log('  Total evidence available:', evidenceWithCorrectFields.length);
-
-    // Unlock evidence detected in AI response
-    if (evidenceInAIResponse.length > 0) {
-      const aiEvidenceToInsert = evidenceInAIResponse.map(evidenceId => ({
-        game_id,
-        evidence_id: evidenceId,
-      }));
-
-      const { error: aiUnlockError } = await supabase
-        .from('evidence_unlocked')
-        .insert(aiEvidenceToInsert);
-
-      if (aiUnlockError) {
-        console.error('Error unlocking evidence from AI response:', aiUnlockError);
-      }
-    }
-
-    // Combine all newly unlocked evidence
-    const allNewlyUnlocked = [...newlyDetectedEvidence, ...evidenceInAIResponse];
 
     // ============================================
     // STEP 7: Store AI Response
@@ -325,7 +354,7 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
       });
 
     if (aiMessageError) {
-      console.error('Error storing AI message:', aiMessageError);
+      logger.error('[Chat] Failed to store AI message', aiMessageError, traceId);
       res.status(500).json({
         success: false,
         error: 'Failed to store AI response',
@@ -344,20 +373,22 @@ router.post('/:game_id/chat', async (req: Request, res: Response): Promise<void>
     // For MVP, we'll just flag it
 
     // ============================================
-    // STEP 9: Return Response
+    // STEP 9: Return Response with Discovery Progress
     // ============================================
+
+    logger.info(`[Chat] Request completed successfully for game: ${game_id}`, traceId);
 
     res.status(200).json({
       success: true,
       ai_response: aiResponse,
-      new_evidence_unlocked: allNewlyUnlocked,
+      new_evidence_unlocked: newlyUnlockedEvidence,
       message_count: newMessageCount,
       summary_triggered: summaryTriggered,
+      discovery_progress: discoveryProgress,
     });
 
   } catch (error) {
-    console.error('Chat endpoint error:', error);
-    console.error('Error details:', JSON.stringify(error, null, 2));
+    logger.error('[Chat] Endpoint error', error as Error, traceId);
     res.status(500).json({
       success: false,
       error: 'Internal server error',

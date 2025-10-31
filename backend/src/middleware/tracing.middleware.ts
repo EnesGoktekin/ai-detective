@@ -26,7 +26,7 @@ declare global {
  * Generates a unique trace ID using UUID v4 and attaches it to req.traceId
  * This allows tracking of requests across the application
  */
-export function tracingMiddleware(req: Request, res: Response, next: NextFunction): void {
+export function tracingMiddleware(req: Request, _res: Response, next: NextFunction): void {
   // Generate and attach trace ID to request
   req.traceId = generateTraceId();
   

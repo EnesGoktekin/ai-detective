@@ -76,14 +76,13 @@ export interface SceneObject {
 /**
  * Evidence Lookup Table
  * Defines all potential clues for game progression
+ * Note: unlock_keywords and object_id removed - now using hierarchical discovery paths
  */
 export interface EvidenceLookup {
   evidence_id: string; // UUID
   case_id: string; // Foreign key to cases
-  object_id: string | null; // Foreign key to scene_objects (nullable)
   display_name: string;
   description: string;
-  unlock_keywords: string[]; // Array of keywords for discovery
   is_required_for_accusation: boolean; // Default: true
   created_at: string; // ISO 8601 timestamp
 }
@@ -148,6 +147,7 @@ export interface EvidenceDiscoveryPath {
   unlock_keyword: string; // Keyword to trigger unlock
   is_unlock_trigger: boolean; // Whether this step unlocks evidence
   ai_description: string; // Description for AI context
+  parent_step_number: number | null; // Parent step for hierarchy
   created_at?: string; // ISO 8601 timestamp
 }
 
@@ -160,6 +160,7 @@ export interface GamePathProgress {
   game_id: string; // Foreign key to games
   path_id: string; // Foreign key to evidence_discovery_paths
   last_completed_step: number; // Last completed step number
+  unlocked_at?: string; // ISO 8601 timestamp when unlocked
   updated_at?: string; // ISO 8601 timestamp
 }
 
