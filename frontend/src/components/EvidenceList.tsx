@@ -180,8 +180,8 @@ export const EvidenceList: React.FC<EvidenceListProps> = ({
 
     fetchEvidence();
 
-    // Poll for updates every 5 seconds (increased from 3)
-    const interval = setInterval(fetchEvidence, 5000);
+    // Poll for updates every 20 seconds (optimized from 5 seconds to reduce backend load)
+    const interval = setInterval(fetchEvidence, 20000);
     return () => clearInterval(interval);
   }, [gameId]);
 
