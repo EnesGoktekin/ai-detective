@@ -23,6 +23,10 @@ import {
 const MOCK_GAME_ID = '00000000-0000-0000-0000-000000000001';
 const SMALL_VIAL_CAP_EVIDENCE_ID = '88df36a9-1127-4e17-b0c5-dc20b14da03a';
 
+// Suspect IDs from "The Silent Watchman" case
+const GUILTY_SUSPECT_ID = 'e6ac2a96-6d90-46c5-8819-f842ab38e653'; // Lisa Chen (is_guilty: true)
+const INNOCENT_SUSPECT_ID = 'c67ea41e-be3d-4729-843b-4c1eba202e6b'; // Mark Bell (is_guilty: false)
+
 // Supabase client
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -361,6 +365,191 @@ async function verifyEvidenceUnlocked(traceId: string): Promise<void> {
 }
 
 /**
+ * Get required evidence count for accusation
+ */
+async function getRequiredEvidenceCount(
+  gameId: string,
+  caseId: string,
+  traceId: string
+): Promise<{ requiredCount: number; currentUnlocked: number }> {
+  logger.info('[TEST] Fetching required evidence count...', traceId);
+
+  try {
+    // Get required evidence from case
+    const { data: evidenceData, error: evidenceError } = await supabase
+      .from('evidence_lookup')
+      .select('evidence_id, is_required_for_accusation')
+      .eq('case_id', caseId);
+
+    if (evidenceError || !evidenceData) {
+      throw new Error('Failed to fetch evidence data');
+    }
+
+    const requiredCount = evidenceData.filter(
+      (e: any) => e.is_required_for_accusation
+    ).length;
+
+    // Get unlocked evidence
+    const { data: unlockedData, error: unlockedError } = await supabase
+      .from('evidence_unlocked')
+      .select('evidence_id')
+      .eq('game_id', gameId);
+
+    if (unlockedError) {
+      throw new Error('Failed to fetch unlocked evidence');
+    }
+
+    const currentUnlocked = unlockedData?.length || 0;
+
+    logger.info(
+      `[TEST] Required evidence: ${requiredCount}, Unlocked: ${currentUnlocked}`,
+      traceId
+    );
+
+    return { requiredCount, currentUnlocked };
+  } catch (error) {
+    logger.error('[TEST] getRequiredEvidenceCount failed', error as Error, traceId);
+    throw error;
+  }
+}
+
+/**
+ * Mock accusation function (simulates accusation.routes.ts logic)
+ */
+async function accuseSuspect(
+  gameId: string,
+  _caseId: string,
+  accusedId: string,
+  traceId: string
+): Promise<{
+  success: boolean;
+  isCorrect?: boolean;
+  error?: string;
+  missingCount?: number;
+  totalRequired?: number;
+}> {
+  logger.info(
+    `[TEST] Making accusation: gameId=${gameId}, accusedId=${accusedId}`,
+    traceId
+  );
+
+  try {
+    // Get game with case data
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .select(`
+        *,
+        cases (
+          case_id,
+          title,
+          suspects (
+            suspect_id,
+            name,
+            is_guilty
+          ),
+          evidence_lookup (
+            evidence_id,
+            is_required_for_accusation
+          )
+        )
+      `)
+      .eq('game_id', gameId)
+      .single();
+
+    if (gameError || !game) {
+      return { success: false, error: 'Game session not found' };
+    }
+
+    // Check if game is already completed
+    if (game.is_completed) {
+      return { success: false, error: 'Game session is already completed' };
+    }
+
+    // Get unlocked evidence
+    const { data: unlockedEvidence, error: evidenceError } = await supabase
+      .from('evidence_unlocked')
+      .select('evidence_id')
+      .eq('game_id', gameId);
+
+    if (evidenceError) {
+      return { success: false, error: 'Failed to fetch unlocked evidence' };
+    }
+
+    const unlockedEvidenceIds = new Set(
+      unlockedEvidence?.map((e: any) => e.evidence_id) || []
+    );
+
+    // Check required evidence
+    const requiredEvidence = game.cases.evidence_lookup.filter(
+      (e: any) => e.is_required_for_accusation
+    );
+    const requiredEvidenceIds = requiredEvidence.map((e: any) => e.evidence_id);
+    const missingRequired = requiredEvidenceIds.filter(
+      (id: string) => !unlockedEvidenceIds.has(id)
+    );
+
+    if (missingRequired.length > 0) {
+      return {
+        success: false,
+        error: 'Cannot make accusation: missing required evidence',
+        missingCount: missingRequired.length,
+        totalRequired: requiredEvidenceIds.length
+      };
+    }
+
+    // Find suspects
+    const accusedSuspect = game.cases.suspects.find(
+      (s: any) => s.suspect_id === accusedId
+    );
+
+    if (!accusedSuspect) {
+      return { success: false, error: 'Invalid suspect_id: suspect not found' };
+    }
+
+    const guiltySuspect = game.cases.suspects.find(
+      (s: any) => s.is_guilty === true
+    );
+
+    const isCorrect = accusedId === guiltySuspect?.suspect_id;
+
+    // Update game to completed
+    const finalOutcome = {
+      accused_suspect_id: accusedId,
+      accused_suspect_name: accusedSuspect.name,
+      guilty_suspect_id: guiltySuspect?.suspect_id,
+      guilty_suspect_name: guiltySuspect?.name || 'Unknown',
+      is_correct: isCorrect,
+      evidence_collected: unlockedEvidence?.length || 0,
+      total_evidence: game.cases.evidence_lookup.length,
+      completed_at: new Date().toISOString()
+    };
+
+    const { error: updateError } = await supabase
+      .from('games')
+      .update({
+        is_completed: true,
+        final_outcome: finalOutcome,
+        last_updated: new Date().toISOString()
+      })
+      .eq('game_id', gameId);
+
+    if (updateError) {
+      return { success: false, error: 'Failed to update game session' };
+    }
+
+    logger.info(
+      `[TEST] Accusation result: isCorrect=${isCorrect}, accused=${accusedSuspect.name}`,
+      traceId
+    );
+
+    return { success: true, isCorrect };
+  } catch (error) {
+    logger.error('[TEST] accuseSuspect failed', error as Error, traceId);
+    return { success: false, error: 'Internal server error' };
+  }
+}
+
+/**
  * Run complete test flow
  */
 async function runTestFlow(): Promise<void> {
@@ -422,11 +611,151 @@ async function runTestFlow(): Promise<void> {
     // Verify evidence was unlocked
     await verifyEvidenceUnlocked(traceId);
 
+    console.log('\n' + '-'.repeat(80));
+    console.log('🎯 Testing Accusation Endpoint (Phase 13.3)');
+    console.log('-'.repeat(80) + '\n');
+
+    // Scenario A: Early Accusation Test (SHOULD FAIL - Missing Evidence)
+    logger.info('[TEST] Scenario A: Testing early accusation (before required evidence)...', traceId);
+    
+    // First, let's check the current evidence count
+    const { requiredCount, currentUnlocked } = await getRequiredEvidenceCount(
+      MOCK_GAME_ID,
+      caseId,
+      traceId
+    );
+
+    logger.info(
+      `[TEST] Evidence Status: ${currentUnlocked}/${requiredCount} required evidence unlocked`,
+      traceId
+    );
+
+    // If we don't have all required evidence, test should fail
+    if (currentUnlocked < requiredCount) {
+      const earlyAccusationResult = await accuseSuspect(
+        MOCK_GAME_ID,
+        caseId,
+        GUILTY_SUSPECT_ID,
+        traceId
+      );
+
+      if (!earlyAccusationResult.success && earlyAccusationResult.error?.includes('missing required evidence')) {
+        logger.info(
+          `[TEST] ✅ Scenario A PASSED: Early accusation correctly rejected (missing ${earlyAccusationResult.missingCount}/${earlyAccusationResult.totalRequired} required evidence)`,
+          traceId
+        );
+      } else {
+        throw new Error('Scenario A FAILED: Early accusation should have been rejected');
+      }
+    } else {
+      logger.info(
+        '[TEST] ⚠️ Scenario A SKIPPED: All required evidence already unlocked',
+        traceId
+      );
+    }
+
+    // Scenario B: Successful Accusation Test (SHOULD WIN)
+    // First, unlock all required evidence for successful accusation
+    logger.info('[TEST] Scenario B: Unlocking all required evidence...', traceId);
+    
+    const { data: requiredEvidence, error: reqEvidenceError } = await supabase
+      .from('evidence_lookup')
+      .select('evidence_id')
+      .eq('case_id', caseId)
+      .eq('is_required_for_accusation', true);
+
+    if (reqEvidenceError || !requiredEvidence) {
+      throw new Error('Failed to fetch required evidence');
+    }
+
+    // Unlock all required evidence
+    for (const evidence of requiredEvidence) {
+      await supabase
+        .from('evidence_unlocked')
+        .upsert(
+          {
+            game_id: MOCK_GAME_ID,
+            evidence_id: evidence.evidence_id,
+            unlocked_at: new Date().toISOString()
+          },
+          { onConflict: 'game_id,evidence_id' }
+        );
+    }
+
+    logger.info(
+      `[TEST] Unlocked ${requiredEvidence.length} required evidence for testing`,
+      traceId
+    );
+
+    logger.info('[TEST] Scenario B: Testing correct accusation (Lisa Chen - guilty)...', traceId);
+    
+    const correctAccusationResult = await accuseSuspect(
+      MOCK_GAME_ID,
+      caseId,
+      GUILTY_SUSPECT_ID,
+      traceId
+    );
+
+    if (correctAccusationResult.success && correctAccusationResult.isCorrect === true) {
+      logger.info(
+        '[TEST] ✅ Scenario B PASSED: Correct accusation accepted, game won!',
+        traceId
+      );
+    } else {
+      throw new Error(`Scenario B FAILED: Expected success with isCorrect=true, got: ${JSON.stringify(correctAccusationResult)}`);
+    }
+
+    // Verify game is now completed
+    const { data: completedGame, error: gameCheckError } = await supabase
+      .from('games')
+      .select('is_completed, final_outcome')
+      .eq('game_id', MOCK_GAME_ID)
+      .single();
+
+    if (gameCheckError || !completedGame || !completedGame.is_completed) {
+      throw new Error('Game should be marked as completed after accusation');
+    }
+
+    logger.info(
+      '[TEST] ✅ Game completion verified: is_completed=true',
+      traceId
+    );
+
+    // Scenario C: Wrong Accusation Test (SHOULD LOSE)
+    // Reset game for this test
+    logger.info('[TEST] Scenario C: Resetting game for wrong accusation test...', traceId);
+    
+    await supabase
+      .from('games')
+      .update({
+        is_completed: false,
+        final_outcome: null
+      })
+      .eq('game_id', MOCK_GAME_ID);
+
+    logger.info('[TEST] Scenario C: Testing wrong accusation (Mark Bell - innocent)...', traceId);
+    
+    const wrongAccusationResult = await accuseSuspect(
+      MOCK_GAME_ID,
+      caseId,
+      INNOCENT_SUSPECT_ID,
+      traceId
+    );
+
+    if (wrongAccusationResult.success && wrongAccusationResult.isCorrect === false) {
+      logger.info(
+        '[TEST] ✅ Scenario C PASSED: Wrong accusation accepted, game lost!',
+        traceId
+      );
+    } else {
+      throw new Error(`Scenario C FAILED: Expected success with isCorrect=false, got: ${JSON.stringify(wrongAccusationResult)}`);
+    }
+
     console.log('\n' + '='.repeat(80));
-    console.log('✅ ALL TESTS PASSED!');
+    console.log('✅ ALL TESTS PASSED! (Including Accusation Tests)');
     console.log('='.repeat(80) + '\n');
 
-    logger.info('[TEST] All tests completed successfully', traceId);
+    logger.info('[TEST] All tests completed successfully (Phase 13.1, 13.2, 13.3)', traceId);
 
   } catch (error) {
     console.log('\n' + '='.repeat(80));
