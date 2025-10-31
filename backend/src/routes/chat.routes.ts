@@ -17,6 +17,7 @@ import {
   getAllNextStepsForCase,
   updatePathProgress,
   updateGameLastUpdated,
+  unlockEvidenceForPath,
 } from '../services/database.service';
 import {
   assembleAIContext,
@@ -32,12 +33,25 @@ const supabase = createClient(
 const router = Router();
 
 /**
- * Mock unlockEvidence function
- * TODO: Replace with actual implementation
+ * Unlock evidence for a game when a path's unlock trigger is reached
+ * Uses database.service to insert into evidence_unlocked table
  */
-async function unlockEvidence(gameId: string, pathId: string, traceId: string): Promise<void> {
-  logger.info(`[MOCK] Unlocking evidence for game: ${gameId}, path: ${pathId}`, traceId);
-  // Actual implementation will unlock evidence in evidence_unlocked table
+async function unlockEvidence(gameId: string, pathId: string, traceId: string): Promise<string | null> {
+  logger.info(`[Evidence] Attempting to unlock evidence - Game: ${gameId}, Path: ${pathId}`, traceId);
+  
+  const unlockedEvidenceId = await unlockEvidenceForPath(gameId, pathId, traceId);
+  
+  if (unlockedEvidenceId) {
+    logger.info(`[Evidence] ✅ Successfully unlocked evidence: ${unlockedEvidenceId}`, traceId);
+  } else {
+    logger.error(
+      `[Evidence] ❌ Failed to unlock evidence - Game: ${gameId}, Path: ${pathId}`,
+      new Error('Evidence unlock failed'),
+      traceId
+    );
+  }
+  
+  return unlockedEvidenceId;
 }
 
 /**
@@ -304,11 +318,19 @@ router.post('/:game_id/chat', tracingMiddleware, async (req: Request, res: Respo
           traceId
         );
 
-        // Call mock unlockEvidence function
-        await unlockEvidence(game_id, foundNextStep.path_id, traceId);
+        // Unlock evidence in database
+        const unlockedEvidenceId = await unlockEvidence(game_id, foundNextStep.path_id, traceId);
         
-        // TODO: Get actual evidence IDs from database
-        newlyUnlockedEvidence = [foundNextStep.path_id]; // Placeholder
+        if (unlockedEvidenceId) {
+          newlyUnlockedEvidence = [unlockedEvidenceId];
+          logger.info(`[Chat] ✅ Evidence unlocked successfully: ${unlockedEvidenceId}`, traceId);
+        } else {
+          logger.error(
+            `[Chat] ❌ Evidence unlock FAILED for path: ${foundNextStep.path_id}`,
+            new Error('Evidence unlock returned null'),
+            traceId
+          );
+        }
       }
 
       discoveryProgress = {

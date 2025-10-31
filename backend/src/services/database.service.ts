@@ -334,3 +334,83 @@ export async function updateProgressSnapshot(
     // Main path progress update already succeeded
   }
 }
+
+/**
+ * Unlock evidence for a specific game based on discovery path
+ * 
+ * @param gameId - The game session ID
+ * @param pathId - The evidence discovery path ID
+ * @param traceId - Trace ID for request tracking
+ * @returns Unlocked evidence ID or null if failed
+ */
+export async function unlockEvidenceForPath(
+  gameId: string,
+  pathId: string,
+  traceId: string
+): Promise<string | null> {
+  logger.debug(`[DB] Unlocking evidence for game: ${gameId}, path: ${pathId}`, traceId);
+
+  try {
+    // Step 1: Get evidence_id from the discovery path
+    const { data: pathData, error: pathError } = await supabase
+      .from('evidence_discovery_paths')
+      .select('evidence_id')
+      .eq('path_id', pathId)
+      .single();
+
+    if (pathError || !pathData) {
+      logger.error(
+        `[DB] Failed to find evidence_id for path: ${pathId}`,
+        pathError || new Error('No path data found'),
+        traceId
+      );
+      return null;
+    }
+
+    const evidenceId = pathData.evidence_id;
+    logger.info(`[DB] Found evidence_id: ${evidenceId} for path: ${pathId}`, traceId);
+
+    // Step 2: Insert into evidence_unlocked (with duplicate protection)
+    const { data: insertData, error: insertError } = await supabase
+      .from('evidence_unlocked')
+      .insert({
+        game_id: gameId,
+        evidence_id: evidenceId,
+        unlocked_at: new Date().toISOString(),
+      })
+      .select('evidence_id')
+      .single();
+
+    if (insertError) {
+      // Check if it's a duplicate key error (already unlocked)
+      if (insertError.code === '23505') {
+        logger.info(
+          `[DB] Evidence already unlocked - Game: ${gameId}, Evidence: ${evidenceId}`,
+          traceId
+        );
+        return evidenceId; // Return existing evidence ID
+      }
+
+      logger.error(
+        `[DB] Failed to insert into evidence_unlocked - Game: ${gameId}, Evidence: ${evidenceId}`,
+        insertError,
+        traceId
+      );
+      return null;
+    }
+
+    logger.info(
+      `[DB] ✅ Successfully unlocked evidence - Game: ${gameId}, Evidence: ${evidenceId}`,
+      traceId
+    );
+
+    return insertData.evidence_id;
+  } catch (error) {
+    logger.error(
+      `[DB] Unexpected error unlocking evidence - Game: ${gameId}, Path: ${pathId}`,
+      error as Error,
+      traceId
+    );
+    return null;
+  }
+}
