@@ -307,10 +307,11 @@ export function formatChatHistory(messages: ChatMessage[]): string {
  * @param currentSummary - Current conversation summary (or null if no summary yet)
  * @param recentMessages - Last 5 user + AI messages
  * @param userMessage - Latest user message
+ * @param nextExpectedStep - Next hierarchical step to guide user towards (optional)
  * @returns AI response
  */
 export async function generateChatResponse(
-  caseContext: CaseContext,
+  caseContext: CaseContext & { discovery?: string | null, isFinalEvidence?: boolean, nextExpectedStep?: { object_name: string, unlock_keyword: string, step_number: number } | null },
   unlockedEvidence: Array<{name: string, description: string, location: string}>,
   currentSummary: string | null,
   recentMessages: ChatMessage[],
@@ -323,6 +324,42 @@ export async function generateChatResponse(
     // Format conversation history
     const conversationHistory = formatChatHistory(recentMessages);
 
+    // Build hierarchical discovery guidance (if step just completed)
+    let discoveryGuidance = '';
+    if (caseContext.discovery) {
+      discoveryGuidance = `\n## 🔍 Discovery Just Made:\n${caseContext.discovery}`;
+      
+      if (caseContext.isFinalEvidence) {
+        discoveryGuidance += '\n**[CRITICAL]** This discovery unlocks important evidence! Describe it naturally.';
+      }
+    }
+
+    // Build next step guidance (hierarchical navigation)
+    let nextStepGuidance = '';
+    if (caseContext.nextExpectedStep) {
+      const { object_name, unlock_keyword } = caseContext.nextExpectedStep;
+      nextStepGuidance = `
+
+---
+
+## 🎯 HIERARCHICAL INVESTIGATION GUIDANCE (CRITICAL):
+
+**NEXT STEP:** The user should now investigate: **${object_name}**
+
+**GUIDANCE RULES:**
+1. **GUIDE** the user towards ${object_name} naturally in your response
+2. **HINT** at this object/location without explicitly stating the keyword
+3. **KEYWORDS** that trigger discovery: "${unlock_keyword}"
+   - Use these words naturally in your descriptions
+   - Example: If keyword is "check pocket", you might say "The coat seems heavy... something in the pockets maybe?"
+4. **RESTRICTION:** You MUST NOT mention ANY other evidence or objects that haven't been discovered yet
+5. **FOCUS:** Keep the investigation on the current hierarchical path
+6. **BE SUBTLE:** Don't say "you should check the pocket" - instead hint like "I notice the victim's coat... might be worth a closer look"
+
+**Remember:** You're guiding them to the next logical step in the investigation without spoiling the discovery.
+`;
+    }
+
     // Build full prompt
     const fullPrompt = `
 ${systemInstruction}
@@ -334,6 +371,8 @@ ${currentSummary || 'This is the beginning of the conversation.'}
 
 ## Recent Messages:
 ${conversationHistory}
+${discoveryGuidance}
+${nextStepGuidance}
 
 ---
 
