@@ -4,11 +4,13 @@
  * Endpoints for retrieving evidence information
  * and managing evidence unlocking
  * 
- * Phase 5, Step 5.3
+ * Phase 12.5: Added tracing middleware integration
  */
 
 import { Router, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
+import { tracingMiddleware } from '../middleware/tracing.middleware';
+import { logger } from '../services/logger.service';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -84,7 +86,7 @@ router.get('/case/:case_id', async (req: Request, res: Response): Promise<void> 
 /**
  * GET /api/evidence/game/:game_id/unlocked
  * 
- * Get unlocked evidence for a game session
+ * Get unlocked evidence for a game session with nested evidence_lookup JOIN
  * 
  * Response:
  * {
@@ -93,17 +95,26 @@ router.get('/case/:case_id', async (req: Request, res: Response): Promise<void> 
  *   "unlocked_evidence": [
  *     {
  *       "evidence_id": "...",
- *       "name": "Security Footage",
- *       "unlocked_at": "2025-10-25T10:30:00Z"
+ *       "unlocked_at": "2025-10-25T10:30:00Z",
+ *       "evidence_lookup": {
+ *         "display_name": "Security Footage",
+ *         "description": "Camera recordings...",
+ *         "is_required_for_accusation": true
+ *       }
  *     }
  *   ]
  * }
  */
-router.get('/game/:game_id/unlocked', async (req: Request, res: Response): Promise<void> => {
+router.get('/game/:game_id/unlocked', tracingMiddleware, async (req: Request, res: Response): Promise<void> => {
+  const traceId = req.traceId;
+  
   try {
     const { game_id } = req.params;
 
+    logger.info(`[Evidence] Fetching unlocked evidence for game: ${game_id}`, traceId);
+
     if (!game_id) {
+      logger.debug('[Evidence] Missing game_id parameter', traceId);
       res.status(400).json({
         success: false,
         error: 'Game ID is required',
@@ -111,7 +122,7 @@ router.get('/game/:game_id/unlocked', async (req: Request, res: Response): Promi
       return;
     }
 
-    // Get unlocked evidence with details
+    // Get unlocked evidence with nested evidence_lookup JOIN
     const { data: unlockedEvidence, error } = await supabase
       .from('evidence_unlocked')
       .select(`
@@ -127,13 +138,18 @@ router.get('/game/:game_id/unlocked', async (req: Request, res: Response): Promi
       .order('unlocked_at', { ascending: true });
 
     if (error) {
-      console.error('Error fetching unlocked evidence:', error);
+      logger.error('[Evidence] Failed to fetch unlocked evidence', error, traceId);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch unlocked evidence',
       });
       return;
     }
+
+    logger.info(
+      `[Evidence] Successfully fetched ${unlockedEvidence?.length || 0} unlocked evidence items`,
+      traceId
+    );
 
     res.status(200).json({
       success: true,
@@ -142,7 +158,7 @@ router.get('/game/:game_id/unlocked', async (req: Request, res: Response): Promi
     });
 
   } catch (error) {
-    console.error('Unlocked evidence endpoint error:', error);
+    logger.error('[Evidence] Endpoint error', error as Error, traceId);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
