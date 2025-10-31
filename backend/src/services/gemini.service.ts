@@ -342,7 +342,7 @@ export async function generateChatResponse(
     // Build next step guidance (hierarchical navigation)
     let nextStepGuidance = '';
     if (caseContext.nextExpectedStep) {
-      const { object_name, unlock_keyword } = caseContext.nextExpectedStep;
+      const { object_name } = caseContext.nextExpectedStep;
       nextStepGuidance = `
 
 ---
@@ -353,15 +353,16 @@ export async function generateChatResponse(
 
 **GUIDANCE RULES:**
 1. **GUIDE** the user towards ${object_name} naturally in your response
-2. **HINT** at this object/location without explicitly stating the keyword
-3. **KEYWORDS** that trigger discovery: "${unlock_keyword}"
-   - Use these words naturally in your descriptions
-   - Example: If keyword is "check pocket", you might say "The coat seems heavy... something in the pockets maybe?"
+2. **HINT** at this object/location using creative and subtle descriptions
+3. **BE MYSTERIOUS:** Don't tell them directly what to do - make them curious about ${object_name}
 4. **RESTRICTION:** You MUST NOT mention ANY other evidence or objects that haven't been discovered yet
 5. **FOCUS:** Keep the investigation on the current hierarchical path
-6. **BE SUBTLE:** Don't say "you should check the pocket" - instead hint like "I notice the victim's coat... might be worth a closer look"
+6. **EXAMPLES OF GOOD GUIDANCE:**
+   - "I notice the ${object_name}... seems interesting"
+   - "Something about the ${object_name} catches my eye"
+   - "The ${object_name} might be worth examining more closely"
 
-**Remember:** You're guiding them to the next logical step in the investigation without spoiling the discovery.
+**Remember:** You're guiding them to the next logical step WITHOUT revealing specific keywords or actions. Let them discover HOW to investigate naturally.
 `;
     }
 
@@ -369,7 +370,7 @@ export async function generateChatResponse(
     let investigationPointsContext = '';
     if (caseContext.allAvailableInvestigationPoints && caseContext.allAvailableInvestigationPoints.length > 0) {
       const points = caseContext.allAvailableInvestigationPoints
-        .map(p => `- ${p.object_name} (keywords: "${p.unlock_keyword}")`)
+        .map(p => `- ${p.object_name}`)
         .join('\n');
       
       investigationPointsContext = `
@@ -386,6 +387,7 @@ ${points}
 - Present them naturally: "We could check the desk, examine the pedestal, or look at the victim's coat"
 - DON'T reveal all at once unless asked
 - Use this to help redirect stuck players
+- Be creative in how you hint at these locations - don't just list them
 `;
     }
 
