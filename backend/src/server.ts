@@ -11,6 +11,7 @@ import accusationRouter from './routes/accusation.routes';
 import messagesRouter from './routes/messages.routes';
 import { sanitizeBody } from './middleware/validation.middleware';
 import { notFoundHandler, errorHandler } from './middleware/error.middleware';
+import { tracingMiddleware } from './middleware/tracing.middleware';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -35,6 +36,9 @@ app.use(express.json());
 
 // Middleware: Parse URL-encoded request bodies
 app.use(express.urlencoded({ extended: true }));
+
+// Middleware: Tracing - Add unique trace ID to each request
+app.use(tracingMiddleware);
 
 // Middleware: Sanitize request bodies (prevent XSS)
 app.use(sanitizeBody);

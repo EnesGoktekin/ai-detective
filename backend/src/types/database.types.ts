@@ -136,6 +136,33 @@ export interface EvidenceUnlocked {
   unlocked_at: string; // ISO 8601 timestamp
 }
 
+/**
+ * Evidence Discovery Paths Table
+ * Hierarchical evidence discovery system
+ */
+export interface EvidenceDiscoveryPath {
+  path_id: string; // UUID
+  case_id: string; // Foreign key to cases
+  step_number: number; // Step in discovery path
+  object_name: string; // Scene object name
+  unlock_keyword: string; // Keyword to trigger unlock
+  is_unlock_trigger: boolean; // Whether this step unlocks evidence
+  ai_description: string; // Description for AI context
+  created_at?: string; // ISO 8601 timestamp
+}
+
+/**
+ * Game Path Progress Table
+ * Tracks player progress through discovery paths
+ */
+export interface GamePathProgress {
+  id?: string; // UUID
+  game_id: string; // Foreign key to games
+  path_id: string; // Foreign key to evidence_discovery_paths
+  last_completed_step: number; // Last completed step number
+  updated_at?: string; // ISO 8601 timestamp
+}
+
 // ============================================================================
 // API RESPONSE TYPES
 // ============================================================================
