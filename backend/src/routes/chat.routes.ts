@@ -216,6 +216,18 @@ router.post('/:game_id/chat', tracingMiddleware, async (req: Request, res: Respo
       traceId
     );
 
+    // Also fetch ALL steps for this case (to find next expected step after completion)
+    const { data: allCaseSteps, error: allStepsError } = await supabase
+      .from('evidence_discovery_paths')
+      .select('path_id, step_number, object_name, unlock_keyword, is_unlock_trigger, ai_description')
+      .eq('case_id', game.case_id);
+
+    if (allStepsError) {
+      logger.error('[Chat] Failed to fetch all case steps', allStepsError, traceId);
+    }
+
+    const allCaseDiscoveryPaths = allCaseSteps || [];
+
     // Check user message against available steps
     let foundNextStep = null;
     let matchedKeyword = '';
@@ -243,6 +255,7 @@ router.post('/:game_id/chat', tracingMiddleware, async (req: Request, res: Respo
     // Process matched step
     let newlyUnlockedEvidence: string[] = [];
     let discoveryProgress = null;
+    let nextExpectedStepDetails = null;
 
     if (foundNextStep) {
       // Update path progress
@@ -252,6 +265,32 @@ router.post('/:game_id/chat', tracingMiddleware, async (req: Request, res: Respo
         foundNextStep.step_number,
         traceId
       );
+
+      // Find the next expected step in the same path
+      const nextStepNumber = foundNextStep.step_number + 1;
+      const nextStepInPath = allCaseDiscoveryPaths.find(
+        (step: any) => 
+          step.path_id === foundNextStep.path_id && 
+          step.step_number === nextStepNumber
+      );
+
+      if (nextStepInPath) {
+        nextExpectedStepDetails = {
+          object_name: nextStepInPath.object_name,
+          unlock_keyword: nextStepInPath.unlock_keyword,
+          step_number: nextStepInPath.step_number,
+        };
+        
+        logger.debug(
+          `[Chat] Next expected step found: ${nextStepInPath.object_name} (step ${nextStepNumber})`,
+          traceId
+        );
+      } else {
+        logger.debug(
+          `[Chat] No next step found - path completed or final step reached`,
+          traceId
+        );
+      }
 
       // Check if this step unlocks evidence
       if (foundNextStep.is_unlock_trigger) {
@@ -328,6 +367,7 @@ router.post('/:game_id/chat', tracingMiddleware, async (req: Request, res: Respo
       ...caseContext,
       discovery: foundNextStep ? foundNextStep.ai_description : null,
       isFinalEvidence: foundNextStep ? foundNextStep.is_unlock_trigger : false,
+      nextExpectedStep: nextExpectedStepDetails,
     };
 
     logger.debug('[Chat] Generating AI response with enhanced context', traceId);
@@ -338,6 +378,10 @@ router.post('/:game_id/chat', tracingMiddleware, async (req: Request, res: Respo
       caseTitle: enhancedContext.case_title,
       discovery: enhancedContext.discovery,
       isFinalEvidence: enhancedContext.isFinalEvidence,
+      nextExpectedStep: nextExpectedStepDetails ? {
+        object_name: nextExpectedStepDetails.object_name,
+        step_number: nextExpectedStepDetails.step_number,
+      } : null,
       unlockedEvidenceCount: unlockedEvidenceForAI.length,
       recentMessagesCount: aiContext.recentMessages.length,
       hasSummary: !!aiContext.summary,
