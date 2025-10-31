@@ -170,7 +170,6 @@ export async function updatePathProgress(
           game_id: gameId,
           path_id: pathId,
           last_completed_step: newStep,
-          updated_at: new Date().toISOString(),
         },
         {
           onConflict: 'game_id,path_id', // Composite key
