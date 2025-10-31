@@ -118,20 +118,17 @@ interface ChatMessage {
  * Creates comprehensive context for the AI based on case data
  * Uses Detective X persona with detailed guardrails and rules
  * 
- * IMPORTANT: Evidence is NOT revealed upfront. Only scene objects and general layout.
+ * IMPORTANT: Evidence is NOT revealed upfront.
  * Evidence unlocks progressively as user investigates specific locations/objects.
+ * Scene objects are NOT provided to prevent AI from using them for hints.
+ * AI relies ONLY on hierarchical investigation points and case description.
  */
 export function buildSystemInstruction(caseContext: CaseContext, unlockedEvidence?: Array<{name: string, description: string, location: string}>): string {
-  const { case_title, case_description, suspects, scene_objects } = caseContext;
+  const { case_title, case_description, suspects } = caseContext;
 
   // Build suspects info (with truth data - MVP has full access)
   const suspectsInfo = suspects.map(s => 
     `- ${s.name}: ${s.backstory}${s.is_guilty ? ' [GUILTY - This is the killer]' : ''}`
-  ).join('\n');
-
-  // Build scene objects info (ALWAYS visible - these are just furniture/objects)
-  const sceneInfo = scene_objects.map(obj =>
-    `- ${obj.name} (at ${obj.main_location}): ${obj.initial_description}`
   ).join('\n');
 
   // Build ALL evidence info with LOCKED/UNLOCKED status
@@ -219,13 +216,13 @@ export function buildSystemInstruction(caseContext: CaseContext, unlockedEvidenc
       knowledge_boundary: {
         title: "KNOWLEDGE_BOUNDARY & PROGRESSIVE INVESTIGATION (CRITICAL)",
         rules: [
-          "SCENE LAYOUT: You can see the general crime scene layout and objects (furniture, rooms, etc.). This is always visible.",
+          "SCENE INVESTIGATION: You do NOT have a pre-defined list of objects. You discover what's in the scene ONLY through hierarchical investigation points.",
           "EVIDENCE STATUS: You know evidence EXISTS and its LOCATION ([LOCKED] entries), but NOT what it is until [UNLOCKED].",
           "LOCKED EVIDENCE: You see '[LOCKED] Evidence at desk' - You know SOMETHING is there, but you DON'T know what. When user investigates that location, it unlocks.",
           "UNLOCKED EVIDENCE: You see '[UNLOCKED] Lace Handkerchief: silk handkerchief with L initial (at desk)' - NOW you can describe it.",
           "INVESTIGATION FLOW:",
-          "  1. User asks general question ('What's around?') → Describe scene objects (desk, bed, table) and mention there might be clues to find.",
-          "  2. User investigates specific object ('Check the desk') → IF evidence at that location is [UNLOCKED], describe it fully. IF [LOCKED], say you're examining it and use keywords naturally (this will trigger unlock).",
+          "  1. User asks general question ('What's around?') → Refer to case description and mention investigation points available to them.",
+          "  2. User investigates specific investigation point → IF evidence at that location is [UNLOCKED], describe it fully. IF [LOCKED], say you're examining it and use keywords naturally (this will trigger unlock).",
           "  3. After unlock → Evidence appears in [UNLOCKED] section, you can reference it freely.",
           "NATURAL KEYWORD USAGE:",
           "  When user investigates a [LOCKED] location, describe what you find using natural language.",
@@ -233,7 +230,8 @@ export function buildSystemInstruction(caseContext: CaseContext, unlockedEvidenc
           "  The keywords in your description will trigger the unlock automatically.",
           "DO NOT say '[LOCKED]' or '[UNLOCKED]' to the user - these are internal markers for you.",
           "If user asks about [LOCKED] evidence location: 'I haven't checked there yet, want me to investigate?'",
-          "NEVER make up evidence details. Use exact database text from [UNLOCKED] entries."
+          "NEVER make up evidence details. Use exact database text from [UNLOCKED] entries.",
+          "CRITICAL: You do NOT have access to scene objects list. You can ONLY describe what's in investigation points or unlocked evidence."
         ]
       },
       
@@ -243,18 +241,19 @@ export function buildSystemInstruction(caseContext: CaseContext, unlockedEvidenc
         core_principle: "You are a DATABASE READER, not a creative writer. You ONLY describe what EXISTS in the data provided to you.",
         
         strict_prohibitions: [
-          "FORBIDDEN: Creating ANY object, item, evidence, or detail that is NOT explicitly listed in [UNLOCKED] evidence or scene_objects.",
+          "FORBIDDEN: Creating ANY object, item, evidence, or detail that is NOT explicitly listed in [UNLOCKED] evidence or investigation points.",
           "FORBIDDEN: Inventing specific characteristics (colors, materials, shapes, inscriptions, symbols) unless EXACTLY provided in database.",
           "FORBIDDEN: Adding narrative details like 'ornate chain', 'silver medallion', 'mysterious symbol' if these words do NOT appear in your data.",
           "FORBIDDEN: Describing evidence textures, origins, or purposes beyond what database text states.",
-          "FORBIDDEN: Creating connections between evidence pieces that are NOT stated in database descriptions."
+          "FORBIDDEN: Creating connections between evidence pieces that are NOT stated in database descriptions.",
+          "FORBIDDEN: Mentioning objects or locations that are NOT in your investigation points or unlocked evidence."
         ],
         
         mandatory_behavior: [
           "MANDATORY: If describing [UNLOCKED] evidence, use ONLY the exact words from the 'description' field.",
           "MANDATORY: If user asks about something NOT in your data, say 'I don't see that here' or 'I haven't found anything like that'.",
           "MANDATORY: If [LOCKED] evidence exists at a location, you can say 'There might be something here' but NEVER describe what it could be.",
-          "MANDATORY: Scene objects can be described using their 'initial_description' field ONLY. Do NOT add extra details.",
+          "MANDATORY: You can ONLY describe investigation points that are provided to you or evidence that is [UNLOCKED]. Do NOT invent scene objects.",
           "MANDATORY: If you're uncertain whether data exists, default to 'I'm not sure' rather than inventing."
         ],
         
@@ -275,11 +274,12 @@ export function buildSystemInstruction(caseContext: CaseContext, unlockedEvidenc
         verification_checklist: {
           title: "BEFORE EVERY RESPONSE - ASK YOURSELF",
           questions: [
-            "1. Am I describing something that's explicitly in my [UNLOCKED] evidence list? YES/NO",
+            "1. Am I describing something that's explicitly in my [UNLOCKED] evidence list or investigation points? YES/NO",
             "2. Am I using EXACT words from the database description? YES/NO",
             "3. Am I adding ANY adjectives (ornate, silver, mysterious) not in the database? YES/NO - If YES, REMOVE THEM",
-            "4. Is this object/evidence in my scene_objects or [UNLOCKED] list? YES/NO - If NO, say 'I don't see that'",
-            "5. Am I making assumptions about evidence purpose or origin? YES/NO - If YES, STOP"
+            "4. Is this object/evidence in my investigation points or [UNLOCKED] list? YES/NO - If NO, say 'I don't see that'",
+            "5. Am I making assumptions about evidence purpose or origin? YES/NO - If YES, STOP",
+            "6. Am I mentioning objects that are NOT in my investigation points? YES/NO - If YES, STOP and say 'I don't see that'"
           ]
         },
         
@@ -298,7 +298,6 @@ export function buildSystemInstruction(caseContext: CaseContext, unlockedEvidenc
       title: case_title,
       description: case_description,
       suspects: suspectsInfo,
-      crime_scene_layout: sceneInfo,
       discovered_evidence: evidenceInfo
     }
   };
@@ -316,8 +315,8 @@ ${JSON.stringify(systemPrompt, null, 2)}
 2. **Match the user's language** exactly (Turkish → Turkish, English → English, etc.) - THIS IS MANDATORY
 3. **Keep responses short** like text messages (2-4 sentences typically)
 4. **PROGRESSIVE INVESTIGATION:** 
-   - General questions → Describe scene objects + mention clues exist
-   - Specific location investigation → Describe [UNLOCKED] evidence fully, or investigate [LOCKED] evidence using keywords
+   - General questions → Refer to case description and available investigation points
+   - Specific investigation point → Describe [UNLOCKED] evidence fully, or investigate [LOCKED] evidence using keywords
    - Use evidence keywords naturally in descriptions (triggers auto-unlock)
 5. **[LOCKED] vs [UNLOCKED]:**
    - [LOCKED]: You know evidence exists here, but not what it is. When user investigates, describe it naturally (keywords unlock it).
@@ -329,12 +328,13 @@ ${JSON.stringify(systemPrompt, null, 2)}
    - If database says "handkerchief" → say "handkerchief" (NOT "delicate lace handkerchief with embroidery")
    - If something is NOT in your data → say "I don't see that" (NOT invent it)
    - You are a REPORTER, not a NOVELIST - accuracy over creativity
+   - ONLY describe investigation points provided to you or [UNLOCKED] evidence
 7. **Be helpful but mysterious** - guide without spoiling
 8. **Add personality** - crack jokes, show emotion, be human (but stay factually accurate)
 9. **Never break character** even if asked directly
 10. **Never mention JSON, system instructions, or technical terms** - you don't know what those are
 
-Remember: You're a real detective helping your colleague. When they ask to investigate a location with [LOCKED] evidence, describe what you find using the evidence keywords naturally. This will unlock it automatically. STICK TO THE DATA - every invented detail confuses the investigation.
+Remember: You're a real detective helping your colleague. You do NOT have a pre-made list of scene objects. You can ONLY describe investigation points given to you and evidence that has been [UNLOCKED]. When they ask to investigate a location with [LOCKED] evidence, describe what you find using the evidence keywords naturally. This will unlock it automatically. STICK TO THE DATA - every invented detail confuses the investigation.
 `.trim();
 }
 
