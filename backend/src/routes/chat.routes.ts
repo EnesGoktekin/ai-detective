@@ -16,6 +16,7 @@ import {
   getGamePathProgress,
   getAllNextStepsForCase,
   updatePathProgress,
+  updateGameLastUpdated,
 } from '../services/database.service';
 import {
   assembleAIContext,
@@ -266,6 +267,9 @@ router.post('/:game_id/chat', tracingMiddleware, async (req: Request, res: Respo
         traceId
       );
 
+      // Update game's last_updated timestamp
+      await updateGameLastUpdated(game_id, traceId);
+
       // Find the next expected step in the same path
       const nextStepNumber = foundNextStep.step_number + 1;
       const nextStepInPath = allCaseDiscoveryPaths.find(
@@ -391,6 +395,12 @@ router.post('/:game_id/chat', tracingMiddleware, async (req: Request, res: Respo
       discovery: foundNextStep ? foundNextStep.ai_description : null,
       isFinalEvidence: foundNextStep ? foundNextStep.is_unlock_trigger : false,
       nextExpectedStep: nextExpectedStepDetails,
+      allAvailableInvestigationPoints: availableNextSteps.map((step: any) => ({
+        object_name: step.object_name,
+        unlock_keyword: step.unlock_keyword,
+        step_number: step.step_number,
+        path_id: step.path_id,
+      })),
     };
 
     logger.debug('[Chat] Generating AI response with enhanced context', traceId);
@@ -405,6 +415,7 @@ router.post('/:game_id/chat', tracingMiddleware, async (req: Request, res: Respo
         object_name: nextExpectedStepDetails.object_name,
         step_number: nextExpectedStepDetails.step_number,
       } : null,
+      availableInvestigationPointsCount: availableNextSteps.length,
       unlockedEvidenceCount: unlockedEvidenceForAI.length,
       recentMessagesCount: aiContext.recentMessages.length,
       hasSummary: !!aiContext.summary,

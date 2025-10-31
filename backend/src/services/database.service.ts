@@ -145,6 +145,7 @@ export async function getAllNextStepsForCase(
 
 /**
  * Update path progress for a game (UPSERT operation)
+ * Also updates games table with progress snapshot
  * 
  * @param gameId - The game session ID
  * @param pathId - The path ID to update
@@ -163,6 +164,7 @@ export async function updatePathProgress(
   );
 
   try {
+    // Update game_path_progress
     const { error } = await supabase
       .from('game_path_progress')
       .upsert(
@@ -189,6 +191,10 @@ export async function updatePathProgress(
       `[DB] Successfully updated path progress - Game: ${gameId}, Path: ${pathId}, Step: ${newStep}`,
       traceId
     );
+
+    // Update progress snapshot in games table
+    await updateProgressSnapshot(gameId, traceId);
+
   } catch (error) {
     logger.error(
       `[DB] Unexpected error updating path progress - Game: ${gameId}, Path: ${pathId}`,
@@ -196,5 +202,135 @@ export async function updatePathProgress(
       traceId
     );
     throw error;
+  }
+}
+
+/**
+ * Update game's last_updated timestamp
+ * Called after each successful message exchange
+ * 
+ * @param gameId - The game session ID
+ * @param traceId - Trace ID for request tracking
+ */
+export async function updateGameLastUpdated(
+  gameId: string,
+  traceId: string
+): Promise<void> {
+  logger.debug(
+    `[DB] Updating game last_updated timestamp - Game: ${gameId}`,
+    traceId
+  );
+
+  try {
+    const { error } = await supabase
+      .from('games')
+      .update({
+        last_updated: new Date().toISOString()
+      })
+      .eq('game_id', gameId);
+
+    if (error) {
+      logger.error(
+        `[DB] Failed to update game timestamp - Game: ${gameId}`,
+        error,
+        traceId
+      );
+      throw error;
+    }
+
+    logger.debug(
+      `[DB] Successfully updated game timestamp - Game: ${gameId}`,
+      traceId
+    );
+  } catch (error) {
+    logger.error(
+      `[DB] Unexpected error updating game timestamp - Game: ${gameId}`,
+      error as Error,
+      traceId
+    );
+    throw error;
+  }
+}
+
+/**
+ * Update game progress snapshot in games table
+ * Creates a JSONB snapshot of current progress for quick access
+ * 
+ * @param gameId - The game session ID
+ * @param traceId - Trace ID for request tracking
+ */
+export async function updateProgressSnapshot(
+  gameId: string,
+  traceId: string
+): Promise<void> {
+  logger.debug(
+    `[DB] Updating progress snapshot - Game: ${gameId}`,
+    traceId
+  );
+
+  try {
+    // Get current path progress
+    const pathProgress = await getGamePathProgress(gameId, traceId);
+
+    // Get unlocked evidence count
+    const { data: unlockedEvidence, error: evidenceError } = await supabase
+      .from('evidence_unlocked')
+      .select('evidence_id')
+      .eq('game_id', gameId);
+
+    if (evidenceError) {
+      logger.error(
+        `[DB] Failed to fetch unlocked evidence for snapshot - Game: ${gameId}`,
+        evidenceError,
+        traceId
+      );
+    }
+
+    const unlockedCount = unlockedEvidence?.length || 0;
+
+    // Build active paths summary
+    const activePaths = pathProgress.map(progress => ({
+      path_id: progress.path_id,
+      last_completed_step: progress.last_completed_step,
+    }));
+
+    // Create snapshot
+    const snapshot = {
+      last_updated: new Date().toISOString(),
+      unlocked_evidence_count: unlockedCount,
+      completed_paths: pathProgress.length,
+      active_paths: activePaths,
+    };
+
+    // Update games table
+    const { error: updateError } = await supabase
+      .from('games')
+      .update({
+        current_progress_snapshot: snapshot,
+        last_updated: new Date().toISOString()
+      })
+      .eq('game_id', gameId);
+
+    if (updateError) {
+      logger.error(
+        `[DB] Failed to update progress snapshot - Game: ${gameId}`,
+        updateError,
+        traceId
+      );
+      throw updateError;
+    }
+
+    logger.debug(
+      `[DB] Successfully updated progress snapshot - Game: ${gameId}, Paths: ${pathProgress.length}, Evidence: ${unlockedCount}`,
+      traceId
+    );
+  } catch (error) {
+    logger.error(
+      `[DB] Unexpected error updating progress snapshot - Game: ${gameId}`,
+      error as Error,
+      traceId
+    );
+    // Don't throw - snapshot update is non-critical
+    // Main path progress update already succeeded
   }
 }

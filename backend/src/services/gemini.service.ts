@@ -311,7 +311,12 @@ export function formatChatHistory(messages: ChatMessage[]): string {
  * @returns AI response
  */
 export async function generateChatResponse(
-  caseContext: CaseContext & { discovery?: string | null, isFinalEvidence?: boolean, nextExpectedStep?: { object_name: string, unlock_keyword: string, step_number: number } | null },
+  caseContext: CaseContext & { 
+    discovery?: string | null, 
+    isFinalEvidence?: boolean, 
+    nextExpectedStep?: { object_name: string, unlock_keyword: string, step_number: number } | null,
+    allAvailableInvestigationPoints?: Array<{ object_name: string, unlock_keyword: string, step_number: number, path_id: string }> 
+  },
   unlockedEvidence: Array<{name: string, description: string, location: string}>,
   currentSummary: string | null,
   recentMessages: ChatMessage[],
@@ -360,6 +365,30 @@ export async function generateChatResponse(
 `;
     }
 
+    // Build available investigation points context
+    let investigationPointsContext = '';
+    if (caseContext.allAvailableInvestigationPoints && caseContext.allAvailableInvestigationPoints.length > 0) {
+      const points = caseContext.allAvailableInvestigationPoints
+        .map(p => `- ${p.object_name} (keywords: "${p.unlock_keyword}")`)
+        .join('\n');
+      
+      investigationPointsContext = `
+
+---
+
+## 📍 ALL AVAILABLE INVESTIGATION POINTS (For Context):
+
+These are the locations/objects the player can currently investigate:
+${points}
+
+**USAGE:**
+- When player seems stuck or asks "what should I do?", you can mention these options
+- Present them naturally: "We could check the desk, examine the pedestal, or look at the victim's coat"
+- DON'T reveal all at once unless asked
+- Use this to help redirect stuck players
+`;
+    }
+
     // Build full prompt
     const fullPrompt = `
 ${systemInstruction}
@@ -373,6 +402,7 @@ ${currentSummary || 'This is the beginning of the conversation.'}
 ${conversationHistory}
 ${discoveryGuidance}
 ${nextStepGuidance}
+${investigationPointsContext}
 
 ---
 
