@@ -332,6 +332,22 @@ router.post('/:game_id/chat', tracingMiddleware, async (req: Request, res: Respo
 
     logger.debug('[Chat] Generating AI response with enhanced context', traceId);
 
+    // Log AI prompt content for debugging (deployment verification)
+    const promptPreview = {
+      userMessage: trimmedMessage,
+      caseTitle: enhancedContext.case_title,
+      discovery: enhancedContext.discovery,
+      isFinalEvidence: enhancedContext.isFinalEvidence,
+      unlockedEvidenceCount: unlockedEvidenceForAI.length,
+      recentMessagesCount: aiContext.recentMessages.length,
+      hasSummary: !!aiContext.summary,
+    };
+    
+    logger.debug(
+      `[AI_PROMPT_PREVIEW] ${JSON.stringify(promptPreview)}`,
+      traceId
+    );
+
     const aiResponse = await generateChatResponse(
       enhancedContext,
       unlockedEvidenceForAI,
